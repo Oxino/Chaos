@@ -579,6 +579,7 @@ Valeurs temporaires au sens de l'obligation 7 du §22. Elles vivent dans `src/da
 | Caméra de suivi | 22 m derrière, 9 m au-dessus, anticipation 0,35 s | §5.5 |
 | Caméra de résultat | 34 m derrière, 16 m au-dessus, inclinaison 38° | §5.5 |
 | Collision caméra | marge de 1,2 m devant l'obstacle, distance minimale de 8 m ; seul le décor statique bloque | §5.5 |
+| Décalage de cadrage en visée | caméra décalée vers la gauche, lanceur dégagé vers la droite de l'écran ; décalage purement visuel, sans effet sur la direction de tir | §5.5 |
 | Pantin de prototypage | 7 corps, 70 kg au total | §6.2 |
 | Seuil d'impact voiture | 300 N·s, destruction en un coup | §6.4 |
 | Seuil d'impact lampadaire | 180 N·s | §6.4 |

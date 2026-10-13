@@ -57,4 +57,10 @@ export const cameraConfig = {
   /** Rapprochement de la camera quand un obstacle s'interpose entre elle et le personnage. */
   collisionMargin: 1.2,
   minFollowDistance: 8,
+  /**
+   * Decalage de cadrage de la camera de visee, en unites de vue. Positif = camera decalee vers
+   * la gauche, donc lanceur et trajectoire degages vers la droite de l'ecran.
+   * Decalage purement visuel : il ne modifie pas la direction de tir.
+   */
+  aimScreenOffsetX: 4,
 } as const;

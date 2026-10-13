@@ -1,5 +1,5 @@
 import { ArcRotateCamera, type Scene, Vector3 } from "@babylonjs/core";
-import { aimConfig, launcherConfig } from "../../data/config/gameplayConfig";
+import { aimConfig, cameraConfig, launcherConfig } from "../../data/config/gameplayConfig";
 import type { LauncherAnchor } from "../../data/content/levels/levelTypes";
 import { yawPitchDegFromDirection } from "../../game/aiming/aimMath";
 
@@ -50,4 +50,5 @@ export function resetAimCamera(camera: ArcRotateCamera, anchor: LauncherAnchor):
       anchor.position.z - BEHIND_DISTANCE,
     ),
   );
+  camera.targetScreenOffset.x = cameraConfig.aimScreenOffsetX;
 }
