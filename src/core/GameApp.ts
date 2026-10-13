@@ -12,6 +12,8 @@ import { engineConfig, physicsConfig } from "../data/config/engineConfig";
 import { destructionConfig, scoreConfig } from "../data/config/gameplayConfig";import { prototypeDistrict } from "../data/content/levels/prototypeDistrict";
 import { describePassive } from "../data/content/passives/passiveTypes";
 import { AimingController } from "../game/aiming/AimingController";
+import { AbilityController, type AbilityState } from "../game/ability/AbilityController";
+import { AbilityEffects } from "../rendering/effects/AbilityEffects";
 import { BuildSelectionService } from "../game/build/BuildSelectionService";
 import { clipTrajectoryToScene } from "../game/aiming/clipTrajectoryToScene";
 import { CameraDirector } from "../game/camera/CameraDirector";
@@ -37,6 +39,13 @@ const STATE_LABELS: Record<ShotState, string> = {
   ShotComplete: "Tir termine",
 };
 
+const ABILITY_LABELS: Record<AbilityState, string> = {
+  Unavailable: "indisponible",
+  Ready: "pret",
+  Active: "en cours",
+  Used: "utilisee",
+};
+
 interface GameplaySystems {
   readonly aiming: AimingController;
   readonly shots: ShotController;
@@ -46,6 +55,7 @@ interface GameplaySystems {
   readonly score: ScoreService;
   readonly combo: ComboChainTracker;
   readonly build: BuildSelectionService;
+  readonly ability: AbilityController;
 }
 
 /**
@@ -60,8 +70,14 @@ export class GameApp {
   private readonly save = new SaveService();
   private systems: GameplaySystems | undefined;
   private sessionResultsShown = false;
+  private lastShotState: ShotState = "Aiming";
   private readonly handleResize = (): void => this.engine.resize();
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
+    if (event.code === "KeyA") {
+      event.preventDefault();
+      this.systems?.ability.activate();
+      return;
+    }
     if (event.code !== "Space") {
       return;
     }
@@ -89,6 +105,7 @@ export class GameApp {
       onPowerChanged: (ratio) => this.systems?.aiming.setPower(ratio),
       onCycleCharacter: () => this.systems?.build.cycleCharacter(),
       onCycleItem: () => this.systems?.build.cycleItem(),
+      onActivateAbility: () => this.systems?.ability.activate(),
     });
 
     window.addEventListener("resize", this.handleResize);
@@ -124,6 +141,7 @@ export class GameApp {
       score: new ScoreService(),
       combo: new ComboChainTracker(scoreConfig.comboWindowMs, scoreConfig.maxComboMultiplier),
       build,
+      ability: new AbilityController(destruction, new AbilityEffects(this.scene)),
     };
 
     this.scene.onBeforeRenderObservable.add(() => this.tick());
@@ -156,6 +174,13 @@ export class GameApp {
     const { shots, director } = this.systems;
 
     shots.update(deltaMs);
+    if (this.lastShotState !== shots.currentState) {
+      if (shots.currentState === "ShotComplete") {
+        this.systems.ability.endShot();
+      }
+      this.lastShotState = shots.currentState;
+    }
+    this.systems.ability.update(deltaMs);
     this.systems.combo.update(performance.now());
     this.systems.destruction.update();
     this.hud.update(deltaMs);
@@ -242,6 +267,7 @@ export class GameApp {
       itemLabel: this.systems.build.item.displayName,
       passivesLabel: `${describePassive(this.systems.build.character.passive)} / ${describePassive(this.systems.build.item.passive)}`,
     });
+    this.refreshAbilityHud(isAiming);
     this.hud.setStatus(this.buildStatusLines(trajectory.range).join("\n"));
   }
 
@@ -278,22 +304,48 @@ export class GameApp {
         ? `Angle ${aiming.getPitchDeg().toFixed(0)} deg - portee ${range.toFixed(0)} m`
         : "Clic-glisser pour regarder autour, Espace pour terminer le tir.",
     );
-    return lines;
-  }
+    return lines;  }
 
   private launch(): void {
     if (!this.systems) {
       return;
     }
-    const { aiming, shots, destruction } = this.systems;
+    const { aiming, shots, destruction, ability, build } = this.systems;
     if (shots.launch(aiming.getDirection(), aiming.power)) {
       destruction.beginShot();
       this.hud.clearImpact();
+      const character = shots.activeCharacter;
+      if (character) {
+        ability.beginShot(build.item.ability, character);
+      }
     }
   }
 
+  private refreshAbilityHud(isAiming: boolean): void {
+    if (!this.systems) {
+      return;
+    }
+    const { ability, build } = this.systems;
+    const configured = build.item.ability;
+
+    if (!configured) {
+      this.hud.setAbility(null, false);
+      return;
+    }
+    if (isAiming) {
+      this.hud.setAbility(`${configured.displayName} : pret`, false);
+      return;
+    }
+    this.hud.setAbility(
+      `${configured.displayName} : ${ABILITY_LABELS[ability.currentState]}`,
+      ability.canActivate,
+    );
+  }
+
   private endShot(): void {
-    this.systems?.shots.endShotManually();
+    if (this.systems?.shots.endShotManually()) {
+      this.systems.ability.endShot();
+    }
   }
 
   private reset(): void {

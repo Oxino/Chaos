@@ -1,5 +1,6 @@
 import { Color3, type PhysicsBody, type Scene, StandardMaterial, Vector3 } from "@babylonjs/core";
 import type { DestructibleState } from "../../data/content/destructibles/destructibleTypes";
+import { explosionFalloff } from "../ability/explosionMath";
 import type { DebrisBudget } from "./DebrisBudget";
 import type { DestructibleBuilding } from "./DestructibleBuilding";
 import type { DestructibleObject, DestructionResult } from "./DestructibleObject";
@@ -86,6 +87,33 @@ export class DestructionService {
 
   update(): void {
     this.debris.update();
+  }
+
+  /**
+   * Souffle de zone : chaque destructible dans le rayon recoit une impulsion radiale et un
+   * impact attenue avec la distance. Les destructions qui en decoulent alimentent normalement
+   * le score et les chaines (spec 8.3).
+   */
+  applyExplosion(center: Vector3, radius: number, impulse: number, impactStrength: number): void {
+    for (const destructible of this.objects.values()) {
+      if (destructible.isDestroyed) {
+        continue;
+      }
+
+      const offset = destructible.position.subtract(center);
+      const falloff = explosionFalloff(offset.length(), radius);
+      if (falloff === 0) {
+        continue;
+      }
+
+      offset.y += 0.5;
+      destructible.applyImpulse(offset.normalize().scaleInPlace(impulse * falloff));
+
+      const result = destructible.applyImpact(impactStrength * falloff);
+      if (result) {
+        this.publish(result, destructible);
+      }
+    }
   }
 
   /** Reinitialisation complete du niveau pour la partie suivante (spec 6.3). */

@@ -19,6 +19,7 @@ export interface PrototypeHudActions {
   readonly onPowerChanged: (ratio: number) => void;
   readonly onCycleCharacter: () => void;
   readonly onCycleItem: () => void;
+  readonly onActivateAbility: () => void;
 }
 
 export interface BuildSummary {
@@ -41,6 +42,7 @@ export class PrototypeHud {
   private readonly characterButton: Button;
   private readonly itemButton: Button;
   private readonly passivesText: TextBlock;
+  private readonly abilityButton: Button;
   private actionMode: HudActionMode = "launch";
 
   constructor(scene: Scene, actions: PrototypeHudActions) {
@@ -146,6 +148,31 @@ export class PrototypeHud {
     this.passivesText.outlineColor = "#10131a";
     this.passivesText.outlineWidth = 4;
     this.buildPanel.addControl(this.passivesText);
+
+    this.abilityButton = this.createButton(
+      "abilityButton",
+      "Capacite",
+      "#7a4fd0",
+      actions.onActivateAbility,
+    );
+    this.abilityButton.width = "240px";
+    this.abilityButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+    this.abilityButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+    this.abilityButton.paddingRight = "16px";
+    this.abilityButton.paddingBottom = "24px";
+    this.abilityButton.isVisible = false;
+    this.texture.addControl(this.abilityButton);
+  }
+
+  /** `label` a null masque le bouton : l'objet equipe n'a pas de capacite active. */
+  setAbility(label: string | null, enabled: boolean): void {
+    this.abilityButton.isVisible = label !== null;
+    if (label === null) {
+      return;
+    }
+    setButtonLabel(this.abilityButton, label);
+    this.abilityButton.isEnabled = enabled;
+    this.abilityButton.alpha = enabled ? 1 : 0.45;
   }
 
   setBuild(summary: BuildSummary): void {

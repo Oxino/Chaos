@@ -147,8 +147,15 @@ Elle reste une estimation : les collisions et réactions imprévues peuvent modi
 - Les bornes sont centralisées dans les données du lanceur et restent ajustables après test sur écran tactile.
 
 ## 5.4 Capacités en vol [VALIDÉ]
-Le joueur peut activer certaines capacités pendant le vol, sans piloter librement la trajectoire. Exemples évoqués : pousser avec un réacteur, déclencher une bombe, éventuellement un parachute futur.
-Chaque capacité doit avoir une commande claire, un état prêt/actif/utilisé, un feedback visuel/sonore et une réponse physique compréhensible.
+Le joueur peut activer certaines capacités pendant le vol, sans piloter librement la trajectoire.
+
+**État actuel** : la capacité appartient à l'objet équipé et constitue une **catégorie distincte du passif** (§10.5). Elle suit les états `Indisponible → Prêt → En cours → Utilisée`, avec **une seule utilisation par tir**. Commande : bouton dédié au HUD ou touche A sur PC.
+
+Deux capacités sont implémentées :
+- **Réacteur** : poussée continue dans le sens du déplacement, avec une composante verticale pour relancer la cloche. L'impulsion est répartie au prorata des masses du pantin. Retour visuel : flamme sur le personnage.
+- **Bombe** : souffle de zone immédiat. Chaque destructible du rayon reçoit une impulsion radiale et un impact atténué avec la distance ; les destructions qui en découlent alimentent normalement le score et les chaînes. Le personnage est soufflé lui aussi, sans mourir (§6.2). Retour visuel : onde de choc.
+
+Les modes `à l'impact` et `automatique` du §16.3 sont définis mais pas encore utilisés : aucun objet ne les justifie pour l'instant.
 
 ## 5.5 Caméra [VALIDÉ]
 Zoom et cadrage automatiques selon l'état du tir, pilotés par un `CameraDirector` :
@@ -423,6 +430,8 @@ Taux de rareté, probabilités, garanties, fragments, coût d'un tirage, plafond
 Ce mode est un outil de fun/test, pas un élément d'équilibrage normal.
 **[PROPOSITION]** Marquer le score comme non officiel ou désactiver les succès quand le mode est actif. Ce garde-fou n'a pas encore été confirmé.
 
+**Note d'implémentation** : le souffle de zone de la bombe (§5.4) est générique et paramétrable. La bombe atomique pourra le réutiliser avec un rayon et une intensité bien plus grands, sans nouveau système.
+
 # 13. UX, UI ET ÉCRANS
 
 ## 13.1 Parcours proposé
@@ -597,7 +606,9 @@ Valeurs temporaires au sens de l'obligation 7 du §22. Elles vivent dans `src/da
 | Masse des voitures | 350 kg, volontairement basse pour qu'elles soient projetables | §6.1 |
 | Impulsion de dispersion | voiture 4 200, lampadaire 1 600, panneau 700 N·s | §6.4 |
 | Personnages | Pantin (neutre), Chat (masse x0,55, rebond +30 %), Coffre-fort (masse x1,8, score x2) | §10.3 |
-| Objets | Pierre (masse x1,35, rebond -20 %), Ballon (masse x0,85, rebond +35 %), Enclume (masse x1,8, puissance x1,45) | §10.4 |
+| Objets | Pierre (masse x1,35, rebond -20 %), Ballon (masse x0,85, rebond +35 %), Enclume (masse x1,8, puissance x1,45), Réacteur, Bombe | §10.4 |
+| Réacteur | 1 800 N·s par seconde pendant 1,2 s | §5.4 |
+| Bombe | rayon 18 m, impulsion 5 200 N·s, impact 900 N·s au centre, atténuation linéaire | §5.4 |
 | Points de l'aperçu de trajectoire | 32, tronqués au premier obstacle détecté par raycast | §5.2 |
 | Puissance par défaut / minimale | 70 % / 5 % | §5.1 |
 | Plage d'inclinaison de la vue exploitée | 45° à 85°, mappée sur un angle de tir de 60° à 10° | §5.1, §5.3 |
@@ -702,7 +713,7 @@ Nombre de tirs selon niveau, score direct, combo de base, objectif de score, ré
 Plusieurs personnages, quelques objets/passifs, sélection avant chaque tir et une capacité activable en vol. Feedback spécifique.
 
 - **4a [TERMINÉ]** : catalogues de 3 personnages et 3 objets, passifs typés, résolution de build pure et testée, sélection au HUD avant chaque tir, effets visibles sur la trajectoire, la physique et le score.
-- **4b [À VENIR]** : capacité activable en vol et feedback dédié.
+- **4b [TERMINÉ]** : capacités actives Réacteur et Bombe, machine à états de la capacité, souffle de zone réutilisable, retours visuels dédiés.
 
 ## Phase 5 — Progression
 XP, premières compétences, quêtes et secrets, déblocage du niveau suivant.

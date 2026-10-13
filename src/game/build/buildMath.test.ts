@@ -23,6 +23,7 @@ const neutralItem: ItemDefinition = {
   massScale: 1,
   launchImpulseScale: 1,
   passive: null,
+  ability: null,
 };
 
 describe("resolveBuild", () => {

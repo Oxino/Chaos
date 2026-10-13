@@ -72,6 +72,10 @@ export class DestructibleObject {
     return this.frozen;
   }
 
+  get position(): Vector3 {
+    return this.mesh.getAbsolutePosition();
+  }
+
   /** Vitesse lineaire courante, utilisee par le budget de debris. */
   get speed(): number {
     return this.aggregate.body.getLinearVelocity().length();
