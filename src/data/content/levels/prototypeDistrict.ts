@@ -1,59 +1,14 @@
-import type { BlockoutBox, LevelBlockout } from "./levelTypes";
+import {
+  BUILDING_COLOR_A,
+  BUILDING_COLOR_C,
+  building,
+  car,
+  pole,
+  sign,
+} from "./blockoutHelpers";
+import type { LevelBlockout } from "./levelTypes";
 
-const BUILDING_COLOR_A = "#5c6b8a";
-const BUILDING_COLOR_B = "#6f7f9e";
-const BUILDING_COLOR_C = "#4a5873";
-const CAR_COLOR = "#e8613c";
-const POLE_COLOR = "#9aa7bd";
-const SIGN_COLOR = "#4ec9b0";
-
-function building(id: string, x: number, z: number, width: number, height: number, depth: number, color: string): BlockoutBox {
-  return {
-    id,
-    position: { x, y: height / 2, z },
-    size: { x: width, y: height, z: depth },
-    color,
-    mass: 0,
-  };
-}
-
-function car(id: string, x: number, z: number): BlockoutBox {
-  return {
-    id,
-    position: { x, y: 0.8, z },
-    size: { x: 2, y: 1.6, z: 4.4 },
-    color: CAR_COLOR,
-    mass: 350,
-    destructibleId: "car",
-  };
-}
-
-function pole(id: string, x: number, z: number): BlockoutBox {
-  return {
-    id,
-    position: { x, y: 3.5, z },
-    size: { x: 0.4, y: 7, z: 0.4 },
-    color: POLE_COLOR,
-    mass: 0,
-    destructibleId: "lamppost",
-  };
-}
-
-function sign(id: string, x: number, z: number): BlockoutBox {
-  return {
-    id,
-    position: { x, y: 1.8, z },
-    size: { x: 2.6, y: 3.6, z: 0.2 },
-    color: SIGN_COLOR,
-    mass: 0,
-    destructibleId: "sign",
-  };
-}
-
-/**
- * Blockout du quartier de prototypage (spec 19, Phase 1).
- * Uniquement des primitives : aucun asset .glb avant la Phase 7.
- */
+/** Premier quartier : apprentissage du tir, de la destruction et des chaines. */
 export const prototypeDistrict: LevelBlockout = {
   id: "level_proto_district",
   displayName: "Quartier de prototypage",
@@ -73,8 +28,6 @@ export const prototypeDistrict: LevelBlockout = {
     building("building_right_1", 16, -6, 12, 24, 12, BUILDING_COLOR_C),
     building("building_right_2", 16, 12, 12, 18, 12, BUILDING_COLOR_A),
     building("building_right_4", 16, 48, 12, 20, 12, BUILDING_COLOR_C),
-    building("tower_back_left", -34, 26, 16, 40, 16, BUILDING_COLOR_B),
-    building("tower_back_right", 34, 34, 16, 36, 16, BUILDING_COLOR_A),
     building("block_far", 0, 70, 44, 22, 14, BUILDING_COLOR_C),
 
     car("car_1", -4, -10),
@@ -100,5 +53,31 @@ export const prototypeDistrict: LevelBlockout = {
   buildings: [
     { id: "tower_left", buildingId: "officeTower", position: { x: -13.5, y: 0, z: 18 } },
     { id: "tower_right", buildingId: "officeTower", position: { x: 13.5, y: 0, z: 36 } },
+  ],
+  secrets: [
+    {
+      id: "secret_proto_rooftop",
+      name: "Survol des toits",
+      position: { x: 0, y: 28, z: 10 },
+      radius: 5,
+      xpReward: 120,
+      scoreBonus: 800,
+    },
+    {
+      id: "secret_proto_alley",
+      name: "Ruelle oubliee",
+      position: { x: -24, y: 3, z: 40 },
+      radius: 5,
+      xpReward: 120,
+      scoreBonus: 800,
+    },
+    {
+      id: "secret_proto_far",
+      name: "Bout de la rue",
+      position: { x: 0, y: 6, z: 58 },
+      radius: 5,
+      xpReward: 150,
+      scoreBonus: 1000,
+    },
   ],
 };

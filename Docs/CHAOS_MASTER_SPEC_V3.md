@@ -269,6 +269,10 @@ Ce sont des exemples de quartiers, pas une liste exhaustive figée.
 Chaque niveau doit viser **3 à 4 secrets**. Exemples : cible cachée, zone dissimulée, objet spécial, interaction improbable, cible à atteindre d'une manière inattendue.
 Les secrets encouragent l'exploration mais ne doivent pas être obligatoires pour atteindre le score de déblocage.
 
+**État actuel** : un secret est une **zone à traverser en vol**, qui accorde un bonus de score immédiat et de l'XP en fin de partie. La découverte est unique par partie puis persistée.
+
+**Simplification assumée du prototype** : les zones sont matérialisées par un anneau visible. Des secrets réellement dissimulés, et des secrets d'un autre type que la zone à traverser, relèvent du contenu de la Phase 7.
+
 ## 7.4 Destruction et accès
 La destruction peut révéler une zone ou ouvrir un passage, mais ne doit pas constituer une clé obligatoire d'accès à un niveau. La campagne se débloque par le score minimum et la progression définie.
 
@@ -315,6 +319,10 @@ Exemples : bâtiment entièrement détruit, grande distance parcourue, précisio
 ## 8.5 Campagne par score [VALIDÉ]
 Chaque niveau de campagne possède un score minimum pour débloquer le suivant. Le joueur peut rejouer un niveau. Pas de scénario final ni de boss obligatoire définis à ce stade ; la campagne peut s'étendre avec de nouveaux niveaux.
 
+**État actuel** : campagne ordonnée de deux niveaux. Le premier est toujours accessible ; chaque suivant exige d'avoir atteint l'objectif du précédent, **sans possibilité d'en sauter un**. Le déblocage s'appuie sur le meilleur score enregistré, donc il survit à une partie ratée. L'écran de résultats propose « Niveau suivant » quand il est accessible.
+
+**[À VENIR]** Écran de sélection de niveau (§13.1) : pour l'instant on ne peut qu'avancer, pas revenir à un niveau précédent.
+
 ## 8.6 Mode libre [VALIDÉ]
 Accessible uniquement pour les niveaux déjà débloqués en campagne. Le score est calculé mais n'a pas de conséquence sur la progression officielle.
 
@@ -327,13 +335,21 @@ Catégories :
 
 Récompenses possibles : XP, monnaie, personnages, objets, lanceurs, cosmétiques. Les quêtes guident l'exploration et l'apprentissage, sans récit obligatoire. Nombre et récompenses exacts à définir.
 
+**État actuel [VALIDÉ]** : cinq quêtes de portée « partie » récompensées en XP, suivies en continu et résolues en fin de partie. Aucune n'est nécessaire pour atteindre l'objectif de score du niveau (§2.10). Les quêtes accomplies sont persistées et ne peuvent plus être récompensées, sauf si elles sont marquées répétables.
+
 # 9. XP ET ARBRE DE COMPÉTENCES
 
 ## 9.1 Sources d'XP
 Score, quêtes, combos, secrets et destructions. Éviter le double comptage incontrôlé du même événement.
 
+**État actuel [VALIDÉ]** : l'XP d'une partie vaut une fraction du score total, plus la récompense des quêtes **nouvellement** accomplies. Une quête non répétable déjà validée ne rapporte plus jamais.
+
 ## 9.2 Arbre de compétences
-Progression du joueur par niveaux d'expérience. La règle de distribution des points et les coûts ne sont pas encore définis.
+**[VALIDÉ] Courbe d'XP à coût croissant par palier** : chaque niveau coûte un montant de base augmenté d'un increment fixe par palier déjà franchi.
+
+**[VALIDÉ] Attribution des points** : **un point par niveau, et un second tous les cinq niveaux**. Les valeurs chiffrées sont provisoires (§15.7).
+
+Les coûts des nœuds de l'arbre restent à définir.
 
 Branches proposées :
 - **Propulsion :** puissance initiale, portée, vitesse de lancement.
@@ -348,7 +364,15 @@ Les compétences ne doivent pas introduire un pilotage directionnel permanent en
 - Aucun nœud ne doit être obligatoire pour terminer la campagne.
 - Préférer des choix intéressants à des bonus minuscules et invisibles.
 - Valeurs, prérequis et courbe d'XP à définir.
+**État actuel [VALIDÉ]** : arbre dépensable de huit nœuds sur cinq branches, avec rangs multiples et prérequis. Les effets sont des modificateurs typés appliqués respectivement à la puissance de lancement, à l'intensité d'impact, au rebond, au rayon d'explosion, au score de destruction et au bonus de combo.
 
+Garanties respectées :
+- **aucun effet ne permet de piloter la trajectoire en vol** ;
+- **aucun nœud n'est nécessaire** pour atteindre l'objectif d'un niveau ;
+- les bonus de base sont **perceptibles immédiatement** : un rang de puissance fait passer la portée affichée de 37 à 43 m ;
+- les rangs sont persistés dès l'achat et **validés contre le catalogue au chargement** : un identifiant inconnu ou un rang aberrant est ignoré.
+
+La branche **Élémentaire** reste vide : aucun effet de feu, d'électricité ou de cryogénie n'existe encore.
 # 10. LANCEURS, PERSONNAGES, OBJETS ET BUILDS
 
 ## 10.1 Build
@@ -609,6 +633,15 @@ Valeurs temporaires au sens de l'obligation 7 du §22. Elles vivent dans `src/da
 | Objets | Pierre (masse x1,35, rebond -20 %), Ballon (masse x0,85, rebond +35 %), Enclume (masse x1,8, puissance x1,45), Réacteur, Bombe | §10.4 |
 | Réacteur | 1 800 N·s par seconde pendant 1,2 s | §5.4 |
 | Bombe | rayon 18 m, impulsion 5 200 N·s, impact 900 N·s au centre, atténuation linéaire | §5.4 |
+| Conversion score vers XP | 0,1 XP par point de score | §9.1 |
+| Coût d'un niveau | 800 XP, puis +400 XP par palier franchi, jusqu'au niveau 50 | §9.2 |
+| Points de compétence | 1 par niveau, 2 tous les cinq niveaux | §9.2 |
+| Récompenses de quête | 100 à 250 XP selon la difficulté | §8.7 |
+| Plafond de vitesse de lancement | 38 m/s, sinon un build très léger quitte la carte | §5.1 |
+| Secrets | rayon 5 m, 800 à 1 500 points de bonus, 120 à 200 XP | §7.3 |
+| Campagne | Quartier de prototypage (15 000 pts), Quartier du port (30 000 pts) | §8.5 |
+| Coûts des nœuds de compétence | 1 point pour les nœuds de base, 2 pour les nœuds avancés | §9.2 |
+| Effets des compétences | +8 à +12 % puissance, +10 à +20 % impact, +0,08 rebond, +15 % rayon, +10 % score, +25 % combo | §9.2 |
 | Points de l'aperçu de trajectoire | 32, tronqués au premier obstacle détecté par raycast | §5.2 |
 | Puissance par défaut / minimale | 70 % / 5 % | §5.1 |
 | Plage d'inclinaison de la vue exploitée | 45° à 85°, mappée sur un angle de tir de 60° à 10° | §5.1, §5.3 |
@@ -660,7 +693,7 @@ Recommandations :
 - rendre les opérations de récompense idempotentes ;
 - décider ultérieurement si sauvegarde locale ou cloud.
 
-**État actuel [VALIDÉ]** : sauvegarde **locale en IndexedDB**, schéma versionné, migration tolérante qui ignore les entrées corrompues plutôt que d'échouer, et repli en mémoire si le stockage est indisponible. Les résultats d'une partie ne sont calculés et enregistrés qu'une seule fois. Le choix d'une sauvegarde cloud reste ouvert.
+**État actuel [VALIDÉ]** : sauvegarde **locale en IndexedDB**, **schéma en version 4** (scores, XP totale, quêtes accomplies, secrets découverts, rangs de compétences), migration tolérante qui complète les champs absents des versions antérieures et ignore les entrées corrompues plutôt que d'échouer, et repli en mémoire si le stockage est indisponible. Les résultats d'une partie sont calculés puis écrits **en une seule opération** ; les achats de compétences sont écrits immédiatement. Le choix d'une sauvegarde cloud reste ouvert.
 
 # 18. PERFORMANCE ET ROBUSTESSE
 
@@ -717,6 +750,10 @@ Plusieurs personnages, quelques objets/passifs, sélection avant chaque tir et u
 
 ## Phase 5 — Progression
 XP, premières compétences, quêtes et secrets, déblocage du niveau suivant.
+
+- **5a [TERMINÉ]** : XP, niveaux de joueur à coût croissant, points de compétence, cinq quêtes suivies et récompensées, persistance en schéma version 2, affichage aux résultats.
+- **5b-1 [TERMINÉ]** : secrets par niveau, deuxième quartier, déblocage par score, chargement et libération de niveau à chaud, sauvegarde version 3.
+- **5b-2 [TERMINÉ]** : arbre de compétences dépensable à huit nœuds, bonus appliqués au tir, aux impacts, au rebond, aux explosions et au score, persistance en version 4.
 
 ## Phase 6 — Collection/économie
 Inventaire, monnaie unique, gacha distinct par catégorie, doublons et petites améliorations. Sauvegarde robuste.
@@ -779,7 +816,7 @@ Les idées futures (éditeur, replays, classements, défis hebdomadaires, boss g
 2. Fréquence météo/heure : chaque tir ou chaque partie.
 3. Objets équipables consommés ou réutilisables.
 4. Munitions/cadence des lanceurs futurs.
-5. Courbe XP et attribution des points de compétence.
+6. Équilibrage fin des coûts et effets de l'arbre de compétences (valeurs provisoires en §15.7) et contenu de la branche Élémentaire.
 6. Valeurs de score, fenêtre de combo, multiplicateurs et seuils.
 7. Nombre de niveaux au lancement.
 8. Nombre de lanceurs à terme.

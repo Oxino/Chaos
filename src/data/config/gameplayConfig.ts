@@ -1,9 +1,16 @@
+import type { ProgressionConfig } from "../../game/progression/progressionMath";
+
 /**
  * Reglages de gameplay provisoires (spec 15.7). A ajuster par test, jamais a recopier en dur.
  */
 export const launcherConfig = {
   /** Impulsion appliquee au personnage a pleine puissance, en N.s. */
   maxLaunchImpulse: 2600,
+  /**
+   * Vitesse initiale maximale, en m/s. Sans ce plafond, un build tres leger depasse les
+   * 500 m de portee et quitte la carte.
+   */
+  maxLaunchSpeed: 38,
   /** Bornes de visee en degres, amplitude totale (spec 5.3). */
   horizontalAmplitudeDeg: 75,
   verticalAmplitudeDeg: 140,
@@ -32,8 +39,19 @@ export const shotConfig = {
   resultDurationMs: 1600,
 } as const;
 
-export const scoreConfig = {
-  /** Fenetre pendant laquelle une destruction prolonge la chaine en cours (spec 8.3). */
+/**
+ * Courbe de progression (spec 9). Cout croissant par palier, un point de competence par niveau
+ * et un second tous les cinq niveaux. Valeurs provisoires a equilibrer par test.
+ */
+export const progressionConfig: ProgressionConfig = {
+  xpPerScorePoint: 0.1,
+  baseLevelXp: 800,
+  levelXpIncrement: 400,
+  maxLevel: 50,
+  bonusSkillPointEvery: 5,
+};
+
+export const scoreConfig = {  /** Fenetre pendant laquelle une destruction prolonge la chaine en cours (spec 8.3). */
   comboWindowMs: 4000,
   maxComboMultiplier: 5,
 } as const;

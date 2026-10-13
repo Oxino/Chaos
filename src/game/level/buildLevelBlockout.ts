@@ -35,6 +35,7 @@ function createMaterialCache(scene: Scene): (color: string) => StandardMaterial 
 
 export interface BuiltLevel {
   readonly meshes: readonly Mesh[];
+  readonly aggregates: readonly PhysicsAggregate[];
 }
 
 export function buildLevelBlockout(
@@ -45,6 +46,7 @@ export function buildLevelBlockout(
   const materialFor = createMaterialCache(scene);
   const damageMaterials = createDestructibleMaterials(scene);
   const meshes: Mesh[] = [];
+  const aggregates: PhysicsAggregate[] = [];
 
   const ground = MeshBuilder.CreateGround(
     "ground",
@@ -55,8 +57,14 @@ export function buildLevelBlockout(
   // Le sol ne bloque pas la camera : un rayon partant d'un personnage au ras du sol le toucherait
   // immediatement et collerait la camera au personnage.
   ground.metadata = { blocksCamera: false, isGround: true };
-  new PhysicsAggregate(ground, PhysicsShapeType.BOX, { mass: 0, restitution: 0.1 }, scene);
+  const groundAggregate = new PhysicsAggregate(
+    ground,
+    PhysicsShapeType.BOX,
+    { mass: 0, restitution: 0.1 },
+    scene,
+  );
   meshes.push(ground);
+  aggregates.push(groundAggregate);
 
   for (const box of blockout.boxes) {
     const mesh = MeshBuilder.CreateBox(
@@ -75,6 +83,7 @@ export function buildLevelBlockout(
       scene,
     );
     meshes.push(mesh);
+    aggregates.push(aggregate);
 
     if (box.destructibleId !== undefined) {
       const definition = destructibleCatalog[box.destructibleId];
@@ -97,8 +106,10 @@ export function buildLevelBlockout(
     destruction.registerBuilding(building);
     for (const section of sections) {
       destruction.register(section.object, section.aggregate.body);
+      meshes.push(section.mesh);
+      aggregates.push(section.aggregate);
     }
   }
 
-  return { meshes };
+  return { meshes, aggregates };
 }

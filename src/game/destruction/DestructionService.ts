@@ -32,6 +32,17 @@ export class DestructionService {
   private readonly bodies = new Map<PhysicsBody, DestructibleObject>();
   private readonly buildings: DestructibleBuilding[] = [];
   private readonly destroyedIds = new Set<string>();
+  private collapsedBuildingCount = 0;
+  private impactMultiplier = 1;
+
+  /** Bonus d'impact issu de l'arbre de competences (spec 9.2). */
+  setImpactMultiplier(multiplier: number): void {
+    this.impactMultiplier = Math.max(0, multiplier);
+  }
+
+  get collapsedBuildings(): number {
+    return this.collapsedBuildingCount;
+  }
   private readonly listeners = new Set<DestructionListener>();
   private readonly impactListeners = new Set<ImpactListener>();
   private strongestImpact = 0;
@@ -135,7 +146,8 @@ export class DestructionService {
       return;
     }
 
-    const result = destructible.applyImpact(impulse);
+    const effectiveImpulse = impulse * this.impactMultiplier;
+    const result = destructible.applyImpact(effectiveImpulse);
     if (result) {
       if (result.destroyed) {
         this.scatter(destructible, result.definition.destructionImpulse, normal);
@@ -146,11 +158,11 @@ export class DestructionService {
     if (impulse < REPORTABLE_INTENSITY) {
       return;
     }
-    this.strongestImpact = Math.max(this.strongestImpact, impulse);
+    this.strongestImpact = Math.max(this.strongestImpact, effectiveImpulse);
 
     const report: ImpactReport = {
       targetName: destructible.definition.displayName,
-      intensity: impulse,
+      intensity: effectiveImpulse,
       threshold: destructible.definition.minimumImpactThreshold,
       qualifies: result !== null,
       state: destructible.state,
@@ -195,14 +207,19 @@ export class DestructionService {
       return;
     }
 
-    for (const collapsed of building.onSectionDestroyed()) {
-      if (this.destroyedIds.has(collapsed.result.id)) {
+    const collapsed = building.onSectionDestroyed();
+    if (collapsed.length > 0) {
+      this.collapsedBuildingCount += 1;
+    }
+
+    for (const section of collapsed) {
+      if (this.destroyedIds.has(section.result.id)) {
         continue;
       }
-      this.destroyedIds.add(collapsed.result.id);
-      this.debris.track(collapsed.section);
+      this.destroyedIds.add(section.result.id);
+      this.debris.track(section.section);
       for (const listener of this.listeners) {
-        listener(collapsed.result);
+        listener(section.result);
       }
     }
   }

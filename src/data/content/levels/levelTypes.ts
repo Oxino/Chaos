@@ -1,4 +1,5 @@
 import type { BuildingPlacement } from "../destructibles/buildingTypes";
+import type { SecretDefinition } from "../secrets/secretTypes";
 
 export interface Vector3Like {
   readonly x: number;
@@ -36,4 +37,6 @@ export interface LevelBlockout {
   readonly launcher: LauncherAnchor;
   readonly boxes: readonly BlockoutBox[];
   readonly buildings: readonly BuildingPlacement[];
+  /** Trois a quatre secrets par niveau (spec 7.3). */
+  readonly secrets: readonly SecretDefinition[];
 }

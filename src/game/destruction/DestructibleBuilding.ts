@@ -1,5 +1,6 @@
 import {
   Color3,
+  type Mesh,
   MeshBuilder,
   PhysicsAggregate,
   PhysicsShapeType,
@@ -89,9 +90,12 @@ export function createBuilding(
   placement: BuildingPlacement,
   definition: BuildingDefinition,
   materials: DestructibleMaterials,
-): { building: DestructibleBuilding; sections: { object: DestructibleObject; aggregate: PhysicsAggregate }[] } {
+): {
+  building: DestructibleBuilding;
+  sections: { object: DestructibleObject; aggregate: PhysicsAggregate; mesh: Mesh }[];
+} {
   const building = new DestructibleBuilding(placement.id, definition);
-  const sections: { object: DestructibleObject; aggregate: PhysicsAggregate }[] = [];
+  const sections: { object: DestructibleObject; aggregate: PhysicsAggregate; mesh: Mesh }[] = [];
 
   const material = new StandardMaterial(`buildingMat_${placement.id}`, scene);
   material.diffuseColor = Color3.FromHexString(definition.color);
@@ -146,7 +150,7 @@ export function createBuilding(
       materials,
     );
     building.addSection(object);
-    sections.push({ object, aggregate });
+    sections.push({ object, aggregate, mesh });
   }
 
   return { building, sections };

@@ -5,6 +5,10 @@ import {
   migrateSave,
   type SaveData,
   withBestScore,
+  withCompletedQuests,
+  withDiscoveredSecrets,
+  withSkillRanks,
+  withXp,
 } from "./saveSchema";
 
 const DATABASE_NAME = "chaos";
@@ -33,22 +37,62 @@ export class SaveService {
     return this.data.bestScores[levelId] ?? 0;
   }
 
-  /** Renvoie true si le score constitue un nouveau record. */
-  async recordBestScore(levelId: string, score: number): Promise<boolean> {
-    const record = isNewRecord(this.data, levelId, score);
-    if (!record) {
-      return false;
-    }
+  get totalXp(): number {
+    return this.data.totalXp;
+  }
 
-    this.data = withBestScore(this.data, levelId, score);
-    if (this.database) {
-      try {
-        await writeRecord(this.database, this.data);
-      } catch {
-        // La progression reste en memoire : mieux vaut un score non persiste qu'une partie bloquee.
-      }
+  get completedQuestIds(): ReadonlySet<string> {
+    return new Set(this.data.completedQuestIds);
+  }
+
+  get bestScores(): Readonly<Record<string, number>> {
+    return this.data.bestScores;
+  }
+
+  get skillRanks(): Readonly<Record<string, number>> {
+    return this.data.skillRanks;
+  }
+
+  /** Les competences sont ecrites des l'achat, hors du cycle de fin de partie. */
+  async saveSkillRanks(ranks: Readonly<Record<string, number>>): Promise<void> {
+    this.data = withSkillRanks(this.data, ranks);
+    await this.persist();
+  }
+
+  /**
+   * Enregistre en une seule ecriture le resultat complet d'une partie (spec 17).
+   * Renvoie true si le score constitue un nouveau record.
+   */
+  async recordSessionResult(result: {
+    levelId: string;
+    score: number;
+    gainedXp: number;
+    completedQuestIds: readonly string[];
+    discoveredSecretIds: readonly string[];
+  }): Promise<boolean> {
+    const record = isNewRecord(this.data, result.levelId, result.score);
+
+    let updated = withBestScore(this.data, result.levelId, result.score);
+    updated = withXp(updated, result.gainedXp);
+    updated = withCompletedQuests(updated, result.completedQuestIds);
+    updated = withDiscoveredSecrets(updated, result.discoveredSecretIds);
+
+    if (updated !== this.data) {
+      this.data = updated;
+      await this.persist();
     }
-    return true;
+    return record;
+  }
+
+  private async persist(): Promise<void> {
+    if (!this.database) {
+      return;
+    }
+    try {
+      await writeRecord(this.database, this.data);
+    } catch {
+      // La progression reste en memoire : mieux vaut un score non persiste qu'une partie bloquee.
+    }
   }
 }
 

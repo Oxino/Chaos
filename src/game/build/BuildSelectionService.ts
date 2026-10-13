@@ -12,6 +12,14 @@ import { resolveBuild, type ResolvedBuild } from "./buildMath";
 export class BuildSelectionService {
   private characterIndex = 0;
   private itemIndex = 0;
+  private launchPowerBonus = 0;
+  private bounceBonus = 0;
+
+  /** Bonus issus de l'arbre de competences (spec 9.2). */
+  applySkillBonuses(launchPowerBonus: number, bounceBonus: number): void {
+    this.launchPowerBonus = launchPowerBonus;
+    this.bounceBonus = bounceBonus;
+  }
 
   get character(): CharacterDefinition {
     return characterCatalog[this.characterIndex] as CharacterDefinition;
@@ -22,7 +30,8 @@ export class BuildSelectionService {
   }
 
   get resolved(): ResolvedBuild {
-    return resolveBuild(this.character, this.item);
+    const base = resolveBuild(this.character, this.item);
+    return { ...base, restitution: Math.min(0.9, base.restitution + this.bounceBonus) };
   }
 
   get characterMass(): number {
@@ -37,12 +46,19 @@ export class BuildSelectionService {
     this.itemIndex = (this.itemIndex + 1) % itemCatalog.length;
   }
 
-  launchImpulse(power: number): number {
-    return launcherConfig.maxLaunchImpulse * this.resolved.launchImpulseScale * power;
+  /** Vitesse initiale utilisee par l'apercu de trajectoire (spec 5.2), plafonnee. */
+  launchSpeed(power: number): number {
+    const raw =
+      (launcherConfig.maxLaunchImpulse *
+        this.resolved.launchImpulseScale *
+        (1 + this.launchPowerBonus) *
+        power) /
+      this.characterMass;
+    return Math.min(raw, launcherConfig.maxLaunchSpeed);
   }
 
-  /** Vitesse initiale utilisee par l'apercu de trajectoire (spec 5.2). */
-  launchSpeed(power: number): number {
-    return this.launchImpulse(power) / this.characterMass;
+  /** L'impulsion derive de la vitesse plafonnee, pour que tir et apercu restent coherents. */
+  launchImpulse(power: number): number {
+    return this.launchSpeed(power) * this.characterMass;
   }
 }

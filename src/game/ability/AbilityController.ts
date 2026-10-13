@@ -16,6 +16,12 @@ export class AbilityController {
   private ability: ActiveAbility | null = null;
   private character: LaunchedCharacter | null = null;
   private remainingMs = 0;
+  private explosionRadiusBonus = 0;
+
+  /** Bonus de rayon issu de l'arbre de competences (spec 9.2). */
+  setExplosionRadiusBonus(bonus: number): void {
+    this.explosionRadiusBonus = Math.max(0, bonus);
+  }
 
   constructor(
     private readonly destruction: DestructionService,
@@ -56,7 +62,11 @@ export class AbilityController {
     }
 
     if (this.ability.kind === "bomb") {
-      this.detonate(this.ability.radius, this.ability.impulse, this.ability.impactStrength);
+      this.detonate(
+        this.ability.radius * (1 + this.explosionRadiusBonus),
+        this.ability.impulse,
+        this.ability.impactStrength,
+      );
       this.state = "Used";
       return true;
     }

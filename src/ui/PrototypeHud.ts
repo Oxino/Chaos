@@ -11,15 +11,19 @@ import { aimConfig } from "../data/config/gameplayConfig";
 import type { ImpactReport } from "../game/destruction/DestructionService";
 import { ImpactIndicator } from "./ImpactIndicator";
 import { ResultsPanel, type SessionResults } from "./ResultsPanel";
+import { SkillPanel } from "./SkillPanel";
+import type { SkillNodeStatus } from "../game/skill/SkillTreeService";
 
 export interface PrototypeHudActions {
   readonly onLaunch: () => void;
   readonly onEndShot: () => void;
   readonly onReset: () => void;
+  readonly onNextLevel: () => void;
   readonly onPowerChanged: (ratio: number) => void;
   readonly onCycleCharacter: () => void;
   readonly onCycleItem: () => void;
   readonly onActivateAbility: () => void;
+  readonly onUpgradeSkill: (nodeId: string) => void;
 }
 
 export interface BuildSummary {
@@ -43,6 +47,10 @@ export class PrototypeHud {
   private readonly itemButton: Button;
   private readonly passivesText: TextBlock;
   private readonly abilityButton: Button;
+  private readonly secretText: TextBlock;
+  private readonly skillPanel: SkillPanel;
+  private readonly skillButton: Button;
+  private secretMs = 0;
   private actionMode: HudActionMode = "launch";
 
   constructor(scene: Scene, actions: PrototypeHudActions) {
@@ -116,7 +124,36 @@ export class PrototypeHud {
 
     this.powerLabel.text = formatPower(this.powerSlider.value);
     this.impactIndicator = new ImpactIndicator(this.texture);
-    this.resultsPanel = new ResultsPanel(this.texture, actions.onReset);
+    this.resultsPanel = new ResultsPanel(this.texture, actions.onReset, actions.onNextLevel);
+
+    this.secretText = new TextBlock("secretText");
+    this.secretText.height = "40px";
+    this.secretText.fontSize = 26;
+    this.secretText.color = "#ffd24a";
+    this.secretText.outlineColor = "#10131a";
+    this.secretText.outlineWidth = 5;
+    this.secretText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+    this.secretText.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    this.secretText.paddingTop = "120px";
+    this.secretText.alpha = 0;
+    this.texture.addControl(this.secretText);
+
+    this.skillPanel = new SkillPanel(this.texture, actions.onUpgradeSkill, () =>
+      this.skillPanel.setVisible(false),
+    );
+
+    this.skillButton = this.createButton("skillButton", "Competences", "#7a4fd0", () =>
+      this.skillPanel.setVisible(!this.skillPanel.isVisible),
+    );
+    this.skillButton.width = "200px";
+    this.skillButton.height = "44px";
+    // En haut a gauche sous le bandeau d'etat : la zone haut-droite est occupee par
+    // l'indicateur d'impact, qui intercepterait le clic.
+    this.skillButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+    this.skillButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    this.skillButton.left = "16px";
+    this.skillButton.top = "170px";
+    this.texture.addControl(this.skillButton);
 
     this.buildPanel = new StackPanel("buildPanel");
     this.buildPanel.width = "240px";
@@ -187,6 +224,21 @@ export class PrototypeHud {
     this.itemButton.isEnabled = enabled;
   }
 
+  get skillPanelOpen(): boolean {
+    return this.skillPanel.isVisible;
+  }
+
+  renderSkills(statuses: readonly SkillNodeStatus[], availablePoints: number): void {
+    this.skillPanel.render(statuses, availablePoints);
+  }
+
+  setSkillButtonLabel(availablePoints: number): void {
+    setButtonLabel(
+      this.skillButton,
+      availablePoints > 0 ? `Competences (${availablePoints})` : "Competences",
+    );
+  }
+
   showResults(results: SessionResults): void {
     this.impactIndicator.clear();
     this.resultsPanel.show(results);
@@ -206,6 +258,15 @@ export class PrototypeHud {
 
   update(deltaMs: number): void {
     this.impactIndicator.update(deltaMs);
+    if (this.secretMs > 0) {
+      this.secretMs = Math.max(0, this.secretMs - deltaMs);
+      this.secretText.alpha = Math.min(1, this.secretMs / 600);
+    }
+  }
+
+  showSecret(name: string): void {
+    this.secretText.text = `Secret decouvert : ${name}`;
+    this.secretMs = 2600;
   }
 
   setActionMode(mode: HudActionMode): void {

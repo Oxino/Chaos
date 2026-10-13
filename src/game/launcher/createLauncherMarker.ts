@@ -1,13 +1,15 @@
-import { Color3, MeshBuilder, type Scene, StandardMaterial, Vector3 } from "@babylonjs/core";
+import { Color3, type Mesh, MeshBuilder, type Scene, StandardMaterial, Vector3 } from "@babylonjs/core";
 import type { LauncherAnchor } from "../../data/content/levels/levelTypes";
 
 /**
  * Repere visuel de la fronde. Sans collision : le lanceur ne doit pas gener le personnage au depart.
  */
-export function createLauncherMarker(scene: Scene, anchor: LauncherAnchor): void {
+export function createLauncherMarker(scene: Scene, anchor: LauncherAnchor): readonly Mesh[] {
   const material = new StandardMaterial("launcherMaterial", scene);
   material.diffuseColor = Color3.FromHexString("#c8d4e8");
   material.specularColor = Color3.Black();
+
+  const meshes: Mesh[] = [];
 
   const post = MeshBuilder.CreateCylinder(
     "launcherPost",
@@ -17,6 +19,7 @@ export function createLauncherMarker(scene: Scene, anchor: LauncherAnchor): void
   post.position.set(anchor.position.x, anchor.position.y / 2, anchor.position.z);
   post.material = material;
   post.isPickable = false;
+  meshes.push(post);
 
   for (const side of [-1, 1]) {
     const arm = MeshBuilder.CreateCylinder("launcherArm", { height: 3, diameter: 0.4 }, scene);
@@ -28,6 +31,7 @@ export function createLauncherMarker(scene: Scene, anchor: LauncherAnchor): void
     arm.rotation.z = side * 0.35;
     arm.material = material;
     arm.isPickable = false;
+    meshes.push(arm);
   }
 
   const direction = new Vector3(
@@ -46,4 +50,7 @@ export function createLauncherMarker(scene: Scene, anchor: LauncherAnchor): void
   });
   guide.color = Color3.FromHexString("#ffd24a");
   guide.isPickable = false;
+  meshes.push(guide);
+
+  return meshes;
 }

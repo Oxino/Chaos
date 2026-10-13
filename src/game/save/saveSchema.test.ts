@@ -5,6 +5,8 @@ import {
   isNewRecord,
   migrateSave,
   withBestScore,
+  withCompletedQuests,
+  withXp,
 } from "./saveSchema";
 
 describe("migrateSave", () => {
@@ -29,6 +31,49 @@ describe("migrateSave", () => {
 
   it("tronque les scores fractionnaires", () => {
     expect(migrateSave({ bestScores: { a: 99.9 } }).bestScores).toEqual({ a: 99 });
+  });
+
+  it("complete une sauvegarde de version 1 sans perdre les scores", () => {
+    const migrated = migrateSave({ schemaVersion: 1, bestScores: { level_1: 4000 } });
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(migrated.bestScores).toEqual({ level_1: 4000 });
+    expect(migrated.totalXp).toBe(0);
+    expect(migrated.completedQuestIds).toEqual([]);
+  });
+
+  it("nettoie les identifiants de quetes invalides et les doublons", () => {
+    const migrated = migrateSave({ completedQuestIds: ["a", "a", 42, null, "b"] });
+    expect(migrated.completedQuestIds).toEqual(["a", "b"]);
+  });
+
+  it("ignore une XP corrompue", () => {
+    expect(migrateSave({ totalXp: -50 }).totalXp).toBe(0);
+    expect(migrateSave({ totalXp: "beaucoup" }).totalXp).toBe(0);
+  });
+});
+
+describe("withXp", () => {
+  it("cumule l'XP gagnee", () => {
+    expect(withXp(withXp(createEmptySave(), 150), 200).totalXp).toBe(350);
+  });
+
+  it("ignore un gain nul ou invalide", () => {
+    const save = createEmptySave();
+    expect(withXp(save, 0)).toBe(save);
+    expect(withXp(save, -10)).toBe(save);
+  });
+});
+
+describe("withCompletedQuests", () => {
+  it("enregistre les quetes sans doublon", () => {
+    let save = withCompletedQuests(createEmptySave(), ["q1", "q2"]);
+    save = withCompletedQuests(save, ["q2", "q3"]);
+    expect(save.completedQuestIds).toEqual(["q1", "q2", "q3"]);
+  });
+
+  it("ne modifie rien sans quete", () => {
+    const save = createEmptySave();
+    expect(withCompletedQuests(save, [])).toBe(save);
   });
 });
 

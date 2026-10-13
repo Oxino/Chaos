@@ -1,0 +1,88 @@
+import type { SkillNode } from "./skillTypes";
+
+/**
+ * Arbre de competences (spec 9.2). Chaque n\u0153ud de base a un effet perceptible et **aucun
+ * n'est necessaire pour terminer la campagne**. Couts provisoires, a equilibrer par test.
+ */
+export const skillCatalog: readonly SkillNode[] = [
+  {
+    id: "skill_power_1",
+    name: "Bras de fer",
+    description: "+8 % de puissance de lancement par rang.",
+    branch: "propulsion",
+    prerequisiteIds: [],
+    cost: 1,
+    maxRank: 3,
+    effect: { kind: "launchPower", bonusPerRank: 0.08 },
+  },
+  {
+    id: "skill_power_2",
+    name: "Fronde renforcee",
+    description: "+12 % de puissance de lancement.",
+    branch: "propulsion",
+    prerequisiteIds: ["skill_power_1"],
+    cost: 2,
+    maxRank: 2,
+    effect: { kind: "launchPower", bonusPerRank: 0.12 },
+  },
+  {
+    id: "skill_impact_1",
+    name: "Choc lourd",
+    description: "+10 % d'intensite d'impact par rang.",
+    branch: "impact",
+    prerequisiteIds: [],
+    cost: 1,
+    maxRank: 3,
+    effect: { kind: "impact", bonusPerRank: 0.1 },
+  },
+  {
+    id: "skill_impact_2",
+    name: "Bulldozer",
+    description: "+20 % d'intensite d'impact.",
+    branch: "impact",
+    prerequisiteIds: ["skill_impact_1"],
+    cost: 2,
+    maxRank: 2,
+    effect: { kind: "impact", bonusPerRank: 0.2 },
+  },
+  {
+    id: "skill_bounce_1",
+    name: "Ressort",
+    description: "+0,08 de rebond par rang.",
+    branch: "bounce",
+    prerequisiteIds: [],
+    cost: 1,
+    maxRank: 3,
+    effect: { kind: "bounce", bonusPerRank: 0.08 },
+  },
+  {
+    id: "skill_explosive_1",
+    name: "Charge creuse",
+    description: "+15 % de rayon d'explosion par rang.",
+    branch: "explosive",
+    prerequisiteIds: [],
+    cost: 1,
+    maxRank: 2,
+    effect: { kind: "explosionRadius", bonusPerRank: 0.15 },
+  },
+  {
+    id: "skill_chaos_1",
+    name: "Gout du desastre",
+    description: "+10 % de score de destruction par rang.",
+    branch: "chaos",
+    prerequisiteIds: [],
+    cost: 1,
+    maxRank: 3,
+    effect: { kind: "destructionScore", bonusPerRank: 0.1 },
+  },
+  {
+    id: "skill_chaos_2",
+    name: "Reaction en chaine",
+    description: "+25 % de bonus de combo.",
+    branch: "chaos",
+    prerequisiteIds: ["skill_chaos_1"],
+    cost: 2,
+    maxRank: 2,
+    effect: { kind: "comboScore", bonusPerRank: 0.25 },
+  },
+];

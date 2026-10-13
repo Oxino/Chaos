@@ -17,6 +17,13 @@ export interface SessionResults {
   readonly destroyedCount: number;
   readonly bestScore: number;
   readonly isNewRecord: boolean;
+  readonly gainedXp: number;
+  readonly playerLevel: number;
+  readonly skillPoints: number;
+  readonly completedQuests: readonly string[];
+  readonly secretsFound: number;
+  readonly secretsTotal: number;
+  readonly hasNextLevel: boolean;
 }
 
 /**
@@ -28,11 +35,12 @@ export class ResultsPanel {
   private readonly stack: StackPanel;
   private readonly lines: TextBlock[] = [];
   private readonly title: TextBlock;
+  private readonly nextLevelButton: Button;
 
-  constructor(texture: AdvancedDynamicTexture, onReplay: () => void) {
+  constructor(texture: AdvancedDynamicTexture, onReplay: () => void, onNextLevel: () => void) {
     this.panel = new Rectangle("resultsPanel");
-    this.panel.width = "460px";
-    this.panel.height = "420px";
+    this.panel.width = "500px";
+    this.panel.height = "580px";
     this.panel.thickness = 0;
     this.panel.cornerRadius = 16;
     this.panel.background = "#10131aee";
@@ -48,10 +56,18 @@ export class ResultsPanel {
     this.title = createLine(26, "#ffd24a");
     this.stack.addControl(this.title);
 
-    for (let index = 0; index < 7; index += 1) {
+    for (let index = 0; index < 10; index += 1) {
       const line = createLine(19, "#f2f4f8");
       this.lines.push(line);
       this.stack.addControl(line);
+    }
+
+    // La liste des quetes peut etre longue : elle doit revenir a la ligne plutot que deborder.
+    const questLine = this.lines[9];
+    if (questLine) {
+      questLine.textWrapping = true;
+      questLine.width = "440px";
+      questLine.height = "64px";
     }
 
     const replay = Button.CreateSimpleButton("replayButton", "Rejouer");
@@ -65,6 +81,18 @@ export class ResultsPanel {
     replay.fontSize = 20;
     replay.onPointerClickObservable.add(() => onReplay());
     this.stack.addControl(replay);
+
+    this.nextLevelButton = Button.CreateSimpleButton("nextLevelButton", "Niveau suivant");
+    this.nextLevelButton.width = "220px";
+    this.nextLevelButton.height = "56px";
+    this.nextLevelButton.paddingTop = "10px";
+    this.nextLevelButton.color = "#ffffff";
+    this.nextLevelButton.background = "#3f8f6b";
+    this.nextLevelButton.cornerRadius = 10;
+    this.nextLevelButton.thickness = 0;
+    this.nextLevelButton.fontSize = 20;
+    this.nextLevelButton.onPointerClickObservable.add(() => onNextLevel());
+    this.stack.addControl(this.nextLevelButton);
   }
 
   get isVisible(): boolean {
@@ -82,15 +110,32 @@ export class ResultsPanel {
     this.setLine(2, `Degats directs : ${results.direct}`, "#f2f4f8");
     this.setLine(3, `Bonus de combos : ${results.combo}`, "#f2f4f8");
     this.setLine(4, `Meilleure chaine : ${results.bestChain} destructions`, "#f2f4f8");
-    this.setLine(5, `Objets detruits : ${results.destroyedCount}`, "#f2f4f8");
     this.setLine(
+      5,
+      `Objets detruits : ${results.destroyedCount} - secrets ${results.secretsFound}/${results.secretsTotal}`,
+      "#f2f4f8",
+    );    this.setLine(
       6,
       results.isNewRecord
         ? `Nouveau record : ${results.bestScore}`
         : `Meilleur score : ${results.bestScore}`,
       results.isNewRecord ? "#ffd24a" : "#9aa7bd",
     );
+    this.setLine(7, `XP gagnee : ${results.gainedXp}`, "#5fd38d");
+    this.setLine(
+      8,
+      `Niveau ${results.playerLevel} - ${results.skillPoints} point(s) de competence`,
+      "#5fd38d",
+    );
+    this.setLine(
+      9,
+      results.completedQuests.length > 0
+        ? `Quetes : ${results.completedQuests.join(", ")}`
+        : "Aucune nouvelle quete",
+      results.completedQuests.length > 0 ? "#ffd24a" : "#9aa7bd",
+    );
 
+    this.nextLevelButton.isVisible = results.hasNextLevel;
     this.panel.isVisible = true;
   }
 

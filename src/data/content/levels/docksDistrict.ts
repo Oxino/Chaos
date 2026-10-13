@@ -1,0 +1,94 @@
+import {
+  BUILDING_COLOR_A,
+  BUILDING_COLOR_B,
+  BUILDING_COLOR_C,
+  building,
+  car,
+  pole,
+  sign,
+} from "./blockoutHelpers";
+import type { LevelBlockout } from "./levelTypes";
+
+/** Deuxieme quartier : plus dense, quatre tours, objectif plus exigeant (spec 7.2, ville/port). */
+export const docksDistrict: LevelBlockout = {
+  id: "level_docks",
+  displayName: "Quartier du port",
+  shotsAllowed: 3,
+  targetScore: 30000,
+  groundSize: 200,
+  groundColor: "#35414f",
+  launcher: {
+    position: { x: 0, y: 4, z: -52 },
+    restDirection: { x: 0, y: 0.42, z: 1 },
+  },
+  boxes: [
+    building("dock_left_1", -18, -12, 14, 18, 14, BUILDING_COLOR_C),
+    building("dock_left_2", -18, 56, 14, 26, 14, BUILDING_COLOR_A),
+    building("dock_right_1", 18, -12, 14, 22, 14, BUILDING_COLOR_A),
+    building("dock_right_2", 18, 56, 14, 20, 14, BUILDING_COLOR_B),
+    building("dock_far", 0, 82, 52, 26, 16, BUILDING_COLOR_C),
+
+    car("dock_car_1", -5, -16),
+    car("dock_car_2", 5, -16),
+    car("dock_car_3", -5, 0),
+    car("dock_car_4", 5, 0),
+    car("dock_car_5", 0, 12),
+    car("dock_car_6", -5, 26),
+    car("dock_car_7", 5, 26),
+    car("dock_car_8", 0, 40),
+    car("dock_car_9", -5, 54),
+    car("dock_car_10", 5, 54),
+
+    pole("dock_pole_1", -9, -8),
+    pole("dock_pole_2", 9, 4),
+    pole("dock_pole_3", -9, 18),
+    pole("dock_pole_4", 9, 32),
+    pole("dock_pole_5", -9, 46),
+    pole("dock_pole_6", 9, 60),
+
+    sign("dock_sign_1", -10.5, 8),
+    sign("dock_sign_2", 10.5, 22),
+    sign("dock_sign_3", -10.5, 36),
+    sign("dock_sign_4", 10.5, 50),
+  ],
+  buildings: [
+    { id: "dock_tower_a", buildingId: "officeTower", position: { x: -14, y: 0, z: 14 } },
+    { id: "dock_tower_b", buildingId: "officeTower", position: { x: 14, y: 0, z: 28 } },
+    { id: "dock_tower_c", buildingId: "officeTower", position: { x: -14, y: 0, z: 42 } },
+    { id: "dock_tower_d", buildingId: "officeTower", position: { x: 14, y: 0, z: 68 } },
+  ],
+  secrets: [
+    {
+      id: "secret_docks_crane",
+      name: "Sommet de la grue",
+      position: { x: 0, y: 34, z: 20 },
+      radius: 5,
+      xpReward: 150,
+      scoreBonus: 1000,
+    },
+    {
+      id: "secret_docks_water",
+      name: "Hors des quais",
+      position: { x: -30, y: 4, z: 50 },
+      radius: 5,
+      xpReward: 150,
+      scoreBonus: 1000,
+    },
+    {
+      id: "secret_docks_gap",
+      name: "Entre les tours",
+      position: { x: 0, y: 14, z: 42 },
+      radius: 5,
+      xpReward: 180,
+      scoreBonus: 1200,
+    },
+    {
+      id: "secret_docks_end",
+      name: "Fond du port",
+      position: { x: 0, y: 8, z: 72 },
+      radius: 5,
+      xpReward: 200,
+      scoreBonus: 1500,
+    },
+  ],
+};
