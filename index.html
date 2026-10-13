@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <title>Chaos</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #10131a;
+        font-family: system-ui, sans-serif;
+        overscroll-behavior: none;
+      }
+
+      #renderCanvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+        outline: none;
+      }
+
+      #orientationNotice {
+        display: none;
+      }
+
+      /* Spec 1.4 : mobile en orientation paysage uniquement. */
+      @media (orientation: portrait) and (pointer: coarse) {
+        #renderCanvas {
+          display: none;
+        }
+
+        #orientationNotice {
+          display: flex;
+          position: fixed;
+          inset: 0;
+          align-items: center;
+          justify-content: center;
+          padding: 2rem;
+          text-align: center;
+          color: #f2f4f8;
+          font-size: 1.25rem;
+          line-height: 1.5;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="renderCanvas" touch-action="none"></canvas>
+    <div id="orientationNotice">Tourne ton appareil en mode paysage pour jouer a Chaos.</div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
