@@ -1,5 +1,6 @@
-import { launcherConfig, shotConfig } from "../../data/config/gameplayConfig";
+import { shotConfig } from "../../data/config/gameplayConfig";
 import type { LauncherAnchor, Vector3Like } from "../../data/content/levels/levelTypes";
+import type { BuildSelectionService } from "../build/BuildSelectionService";
 import {
   type CharacterSpawner,
   type LaunchedCharacter,
@@ -26,7 +27,9 @@ export class ShotController {
 
   constructor(
     private readonly spawner: CharacterSpawner,
+    private readonly build: BuildSelectionService,
     private readonly anchor: LauncherAnchor,
+    private readonly shotsAllowed: number,
   ) {}
 
   get currentState(): ShotState {
@@ -37,12 +40,20 @@ export class ShotController {
     return this.shotCount;
   }
 
+  get shotsRemaining(): number {
+    return Math.max(0, this.shotsAllowed - this.shotCount);
+  }
+
+  get isSessionComplete(): boolean {
+    return this.shotsRemaining === 0 && this.state === "Aiming";
+  }
+
   get activeCharacter(): LaunchedCharacter | null {
     return this.character;
   }
 
   get canLaunch(): boolean {
-    return this.state === "Aiming";
+    return this.state === "Aiming" && this.shotsRemaining > 0;
   }
 
   get canEndManually(): boolean {
@@ -54,10 +65,18 @@ export class ShotController {
       return false;
     }
 
-    this.character = this.spawner.spawn(this.anchor.position);
+    const character = this.build.character;
+    const resolved = this.build.resolved;
+    this.character = this.spawner.spawn(this.anchor.position, {
+      definition: character.ragdoll,
+      massScale: resolved.massScale,
+      restitution: resolved.restitution,
+      friction: resolved.friction,
+      tint: character.tint,
+    });
     this.spawner.applyImpulse(
       this.character,
-      computeLaunchImpulse(direction, power, launcherConfig.maxLaunchImpulse),
+      computeLaunchImpulse(direction, 1, this.build.launchImpulse(power)),
     );
 
     this.state = "InFlight";

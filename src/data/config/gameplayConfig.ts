@@ -37,6 +37,12 @@ export const shotConfig = {
   resultDurationMs: 1600,
 } as const;
 
+export const scoreConfig = {
+  /** Fenetre pendant laquelle une destruction prolonge la chaine en cours (spec 8.3). */
+  comboWindowMs: 4000,
+  maxComboMultiplier: 5,
+} as const;
+
 export const destructionConfig = {
   /** Budget de corps detaches encore simules (spec 6.6, 18). Valeur provisoire. */
   maxActiveDebris: 24,

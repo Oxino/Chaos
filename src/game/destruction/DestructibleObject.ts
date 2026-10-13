@@ -27,6 +27,10 @@ export interface DestructionResult {
   readonly definition: DestructibleDefinition;
   readonly state: DestructibleState;
   readonly destroyed: boolean;
+  /** Etapes de degats perdues sur cet impact : elles determinent les points attribues. */
+  readonly stagesLost: number;
+  /** Etapes restantes apres l'impact, utilisee pour rendre l'attribution idempotente. */
+  readonly remainingStages: number;
 }
 
 /**
@@ -78,10 +82,18 @@ export class DestructibleObject {
     if (this.isDestroyed) {
       return null;
     }
+    const stagesLost = this.stage;
     this.stage = 0;
     this.applyVisualState();
     this.applyDestruction();
-    return { id: this.id, definition: this.definition, state: this.state, destroyed: true };
+    return {
+      id: this.id,
+      definition: this.definition,
+      state: this.state,
+      destroyed: true,
+      stagesLost,
+      remainingStages: 0,
+    };
   }
 
   /** Arrete la simulation d'un debris sans le faire disparaitre (spec 6.6). */
@@ -91,6 +103,10 @@ export class DestructibleObject {
     }
     this.frozen = true;
     this.aggregate.body.setMotionType(PhysicsMotionType.STATIC);
+  }
+
+  applyImpulse(impulse: Vector3): void {
+    this.aggregate.body.applyImpulse(impulse, this.mesh.getAbsolutePosition());
   }
 
   /** Renvoie null si l'impact ne qualifie pas : aucun evenement ne doit alors etre emis. */
@@ -112,6 +128,8 @@ export class DestructibleObject {
       definition: this.definition,
       state: this.state,
       destroyed: outcome.destroyed,
+      stagesLost: outcome.stagesLost,
+      remainingStages: outcome.nextStage,
     };
   }
 

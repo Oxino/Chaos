@@ -19,6 +19,7 @@ export const buildingCatalog: Readonly<Record<string, BuildingDefinition>> = {
     sectionMass: 2500,
     // Perdre une seule section suffit a faire ceder la structure : effondrement scenarise (spec 6.4).
     collapseRatio: 0.16,
+    collapseImpulsePerFloor: 5500,
     color: "#6f7f9e",
   },
 };

@@ -215,9 +215,10 @@ Les dégâts dépendent de la force d'impact, de la masse, de la vitesse, de l'a
 ### Règles spécifiques
 - **Voitures :** règle arcade de départ : un impact qualifiant détruit la voiture complètement. Elle reste en place, écrasée, et continue de servir d'obstacle.
 - **Lampadaires et panneaux :** statiques tant qu'ils sont intacts, ils basculent en corps dynamique à la destruction et s'effondrent sur place.
-- **Bâtiments :** composés de **sections préconstruites empilées**, statiques tant qu'elles sont intactes. Chaque section encaisse plusieurs impacts (intact → endommagé → détaché) ; une section qui cède bascule en corps dynamique et tombe. Au-delà d'une proportion configurable de sections perdues, **la tour entière s'effondre**. Aucune destruction voxel.
+- **Bâtiments :** composés de **sections préconstruites empilées**, statiques tant qu'elles sont intactes. Chaque section encaisse plusieurs impacts (intact → endommagé → critique → détaché) ; un impact lourd peut lui faire perdre plusieurs étapes d'un coup. **Perdre une seule section fait céder la structure** : toutes les autres basculent en corps dynamique et reçoivent une poussée latérale commune, d'autant plus forte que l'étage est haut. Aucune destruction voxel.
 - Le seuil d'impact qualifiant est exprimé en **impulsion de collision (N·s)** et vit dans le catalogue de destructibles.
 - **Le contact avec le sol est exclu de la résolution d'impact** : sans cela, tout objet qui se pose s'auto-détruirait au chargement du niveau.
+- **[VALIDÉ] Impulsion de dispersion à la destruction.** Un objet détruit reçoit une impulsion dans le sens du choc, avec une composante verticale. Sans elle un objet détruit reste sur place, ne percute rien, et **aucune réaction en chaîne n'est possible** — ce qui vide de sa substance le pilier du §2.3 et les 40 % de score attendus en combos au §8.1. Les masses doivent rester volontairement basses et arcade (§6.1) pour que les objets soient réellement projetables.
 
 ## 6.5 Résolution d'impact recommandée
 Pour chaque collision :
@@ -288,13 +289,18 @@ Répartition de conception indicative acceptée comme guide : environ 30 % dég�
 ## 8.2 Score direct
 Chaque élément destructible possède une valeur de score configurable. Les exemples évoqués sont des ordres relatifs : panneau/lampadaire = faible ; voiture = moyen ; camion = plus élevé ; destruction complète d'un bâtiment = forte récompense. Les valeurs numériques ne sont pas fixées.
 
+**[VALIDÉ] Les dégâts partiels rapportent des points.** Un objet à plusieurs étapes distribue sa valeur à chaque étape perdue, au prorata. Sans cela le score reste figé tant qu'un objet n'est pas complètement détruit et le joueur ne perçoit aucune progression. Chaque étape porte un identifiant d'attribution distinct pour rester idempotente.
+
 ## 8.3 Réactions en chaîne
-Exemple : personnage touche une voiture, la voiture heurte un panneau, le panneau percute une autre cible. Le système doit reconnaître une chaîne causale sur une fenêtre temporelle configurable et appliquer un multiplicateur/bonus croissant (exemples x2, x3, x4, non définitifs).
-- Afficher clairement le combo en cours.
-- Éviter de compter deux fois le même événement.
-- Définir un plafond de sécurité et une fenêtre de combo.
-- Éviter les boucles infinies.
-- Les formules exactes restent à équilibrer.
+Exemple : personnage touche une voiture, la voiture heurte un panneau, le panneau percute une autre cible. Le système reconnaît une chaîne causale sur une **fenêtre temporelle glissante** : chaque destruction survenue dans la fenêtre prolonge la chaîne et augmente le multiplicateur d'un cran.
+
+**Implémentation [VALIDÉ] :**
+- le multiplicateur vaut la longueur de la chaîne, bornée par un plafond de sécurité ;
+- la valeur de base de l'objet alimente les **dégâts directs**, le surplus `base x (multiplicateur - 1)` alimente les **combos** : les deux composantes du §8.1 restent séparées ;
+- chaque objet porte un identifiant unique et ne peut être récompensé qu'une seule fois ;
+- la chaîne se ferme d'elle-même à l'expiration de la fenêtre.
+
+Le combo en cours est affiché au HUD. Les formules exactes restent à équilibrer.
 
 ## 8.4 Bonus de spectacle
 Exemples : bâtiment entièrement détruit, grande distance parcourue, précision, grand nombre d'objets détruits en peu de temps, secret découvert, interaction rare. Les seuils sont configurables par niveau.
@@ -444,6 +450,7 @@ La trajectoire et la zone de jeu doivent rester dominantes.
 ## 13.3 HUD en vol
 - gains de score ;
 - combo/multiplicateur ;
+- **indicateur d'impact [VALIDÉ]** : nom de la cible touchée, intensité du choc face au seuil de l'objet, et résultat (ignoré, endommagé, détruit). Il s'efface automatiquement et se réinitialise à chaque nouveau tir ;
 - notifications de destruction ;
 - capacité disponible ;
 - progression des quêtes/secrets lorsque pertinent.
@@ -451,6 +458,8 @@ Les notifications doivent s'effacer sans masquer l'action.
 
 ## 13.4 Résultats
 Score total et répartition, meilleurs combos, quêtes/secrets, XP, monnaie, nouveaux déblocages et progression de campagne. Expliquer clairement l'origine des récompenses.
+
+**État actuel [VALIDÉ]** : l'écran affiche le verdict d'objectif, le score total face à l'objectif, la répartition dégâts directs / bonus de combos, la plus longue chaîne, le nombre d'objets détruits, le meilleur score et la mention d'un nouveau record. XP, monnaie et déblocages s'y ajouteront aux Phases 5 et 6.
 
 ## 13.5 Accessibilité recommandée
 Contraste suffisant, textes lisibles sur mobile, zones tactiles généreuses, feedback visuel non dépendant du son, réglages audio, réduction du tremblement et limitation des flashs excessifs.
@@ -571,9 +580,17 @@ Valeurs temporaires au sens de l'obligation 7 du §22. Elles vivent dans `src/da
 | Seuil d'impact lampadaire | 180 N·s | §6.4 |
 | Seuil d'impact panneau | 100 N·s | §6.4 |
 | Aplatissement d'un objet écrasé | 42 % de sa hauteur initiale | §6.4 |
-| Immeuble destructible | 6 sections de 4 m, 2 étapes par section, seuil 200 N·s, masse 2 500 kg par section | §6.4 |
-| Ratio d'effondrement | 20 % des sections perdues | §6.4 |
+| Immeuble destructible | 6 sections de 4 m, 3 étapes par section, seuil 150 N·s, masse 2 500 kg par section | §6.4 |
+| Ratio d'effondrement | 16 % des sections perdues, soit une seule section sur six | §6.4 |
+| Poussée d'effondrement | 5 500 N·s par étage, direction commune tirée au hasard | §6.4 |
 | Budget de débris actifs | 24 corps détachés, gel au-delà | §6.6 |
+| Indicateur d'impact | affiché 1,4 s puis fondu de 0,7 s ; chocs sous 20 N·s non affichés | §13.3 |
+| Fenêtre de combo | 4 s | §8.3 |
+| Multiplicateur de combo maximum | x5 | §8.3 |
+| Objectif du niveau de prototypage | 15 000 points en 3 tirs | §4.3, §8.5 |
+| Valeurs de score | voiture 300, section d'immeuble 200, lampadaire 80, panneau 50 | §8.2 |
+| Masse des voitures | 350 kg, volontairement basse pour qu'elles soient projetables | §6.1 |
+| Impulsion de dispersion | voiture 4 200, lampadaire 1 600, panneau 700 N·s | §6.4 |
 | Points de l'aperçu de trajectoire | 32, tronqués au premier obstacle détecté par raycast | §5.2 |
 | Puissance par défaut / minimale | 70 % / 5 % | §5.1 |
 | Plage d'inclinaison de la vue exploitée | 45° à 85°, mappée sur un angle de tir de 60° à 10° | §5.1, §5.3 |
@@ -625,6 +642,8 @@ Recommandations :
 - rendre les opérations de récompense idempotentes ;
 - décider ultérieurement si sauvegarde locale ou cloud.
 
+**État actuel [VALIDÉ]** : sauvegarde **locale en IndexedDB**, schéma versionné, migration tolérante qui ignore les entrées corrompues plutôt que d'échouer, et repli en mémoire si le stockage est indisponible. Les résultats d'une partie ne sont calculés et enregistrés qu'une seule fois. Le choix d'une sauvegarde cloud reste ouvert.
+
 # 18. PERFORMANCE ET ROBUSTESSE
 
 - Cibler mobile et PC ; les budgets devront être définis sur les appareils choisis.
@@ -664,10 +683,13 @@ Ajouter panneaux, lampadaires, voitures et un bâtiment multi-étapes. Conserver
 - **2a [TERMINÉ]** : système de destructibles data-driven, résolution d'impact par seuil, voitures / lampadaires / panneaux, persistance intra-partie et réinitialisation complète.
 - **2b [TERMINÉ]** : bâtiments à sections détachables, effondrement au-delà d'un ratio de sections perdues, budget de débris.
 
-**Reste à affiner par test de jeu :** seuils d'impact des sections, ratio d'effondrement et placement des tours. L'effondrement complet est couvert par les tests unitaires mais demande encore un réglage pour être déclenchable de façon fiable en 3 à 5 tirs.
+Équilibrage vérifié en jeu : un tir bien placé sur une tour la fait céder et détruit ses six sections, là où un tir en pleine rue ne détruit qu'un ou deux éléments de mobilier.
 
 ## Phase 3 — Score/partie
 Nombre de tirs selon niveau, score direct, combo de base, objectif de score, résultats et meilleur score sauvegardé.
+
+- **3a [TERMINÉ]** : score direct, chaîne de combos avec fenêtre temporelle et plafond, objectif de score du niveau, limite de tirs par partie et affichage au HUD.
+- **3b [TERMINÉ]** : écran de résultats de fin de partie et meilleur score sauvegardé en IndexedDB.
 
 ## Phase 4 — Builds
 Plusieurs personnages, quelques objets/passifs, sélection avant chaque tir et une capacité activable en vol. Feedback spécifique.
@@ -748,7 +770,7 @@ Les idées futures (éditeur, replays, classements, défis hebdomadaires, boss g
 14. Timeout exact de fin de tir (valeur provisoire en §15.7).
 15. Maquettes UI finales.
 16. Comportement en cas de fermeture pendant une partie.
-17. Sauvegarde locale ou cloud.
+17. Sauvegarde **cloud** éventuelle en complément du local (§17).
 
 *(Tranchés depuis : moteur → §15.1 ; angles de visée et position du lanceur → §5.3 ; contrôles PC → §5.1 ; représentation physique du personnage et calendrier du ragdoll → §6.2 et §19 Phase 1b ; conventions de langue → §15.6.)*
 

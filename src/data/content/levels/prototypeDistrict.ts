@@ -23,7 +23,7 @@ function car(id: string, x: number, z: number): BlockoutBox {
     position: { x, y: 0.8, z },
     size: { x: 2, y: 1.6, z: 4.4 },
     color: CAR_COLOR,
-    mass: 1200,
+    mass: 350,
     destructibleId: "car",
   };
 }
@@ -57,6 +57,9 @@ function sign(id: string, x: number, z: number): BlockoutBox {
 export const prototypeDistrict: LevelBlockout = {
   id: "level_proto_district",
   displayName: "Quartier de prototypage",
+  // Niveau 1 : 3 tirs (spec 4.3).
+  shotsAllowed: 3,
+  targetScore: 15000,
   groundSize: 180,
   groundColor: "#3c4557",
   launcher: {

@@ -1,9 +1,25 @@
-import { Color3, type PhysicsBody, type Scene, StandardMaterial } from "@babylonjs/core";
+import { Color3, type PhysicsBody, type Scene, StandardMaterial, Vector3 } from "@babylonjs/core";
+import type { DestructibleState } from "../../data/content/destructibles/destructibleTypes";
 import type { DebrisBudget } from "./DebrisBudget";
 import type { DestructibleBuilding } from "./DestructibleBuilding";
 import type { DestructibleObject, DestructionResult } from "./DestructibleObject";
 
 export type DestructionListener = (result: DestructionResult) => void;
+
+/** Compte rendu d'un choc, y compris lorsqu'il n'atteint pas le seuil de la cible. */
+export interface ImpactReport {
+  readonly targetName: string;
+  readonly intensity: number;
+  readonly threshold: number;
+  readonly qualifies: boolean;
+  readonly state: DestructibleState;
+  readonly destroyed: boolean;
+}
+
+export type ImpactListener = (report: ImpactReport) => void;
+
+/** En dessous de cette intensite, le choc est trop anodin pour meriter un affichage. */
+const REPORTABLE_INTENSITY = 20;
 
 /**
  * Ecoute les collisions des destructibles, resout les impacts et tient l'etat du monde pour
@@ -16,8 +32,15 @@ export class DestructionService {
   private readonly buildings: DestructibleBuilding[] = [];
   private readonly destroyedIds = new Set<string>();
   private readonly listeners = new Set<DestructionListener>();
+  private readonly impactListeners = new Set<ImpactListener>();
+  private strongestImpact = 0;
 
   constructor(private readonly debris: DebrisBudget) {}
+
+  /** Impact le plus violent du tir en cours. */
+  get strongestImpactOfShot(): number {
+    return this.strongestImpact;
+  }
 
   get destroyedCount(): number {
     return this.destroyedIds.size;
@@ -41,7 +64,7 @@ export class DestructionService {
       if (event.collidedAgainst.transformNode.metadata?.isGround === true) {
         return;
       }
-      this.handleCollision(body, event.impulse);
+      this.handleCollision(body, event.impulse, event.normal);
     });
   }
 
@@ -51,6 +74,14 @@ export class DestructionService {
 
   onDestruction(listener: DestructionListener): void {
     this.listeners.add(listener);
+  }
+
+  onImpact(listener: ImpactListener): void {
+    this.impactListeners.add(listener);
+  }
+
+  beginShot(): void {
+    this.strongestImpact = 0;
   }
 
   update(): void {
@@ -67,9 +98,10 @@ export class DestructionService {
     }
     this.destroyedIds.clear();
     this.debris.clear();
+    this.strongestImpact = 0;
   }
 
-  private handleCollision(body: PhysicsBody, impulse: number): void {
+  private handleCollision(body: PhysicsBody, impulse: number, normal: Vector3 | null): void {
     const destructible = this.bodies.get(body);
     if (!destructible || destructible.isDestroyed) {
       return;
@@ -77,8 +109,41 @@ export class DestructionService {
 
     const result = destructible.applyImpact(impulse);
     if (result) {
+      if (result.destroyed) {
+        this.scatter(destructible, result.definition.destructionImpulse, normal);
+      }
       this.publish(result, destructible);
     }
+
+    if (impulse < REPORTABLE_INTENSITY) {
+      return;
+    }
+    this.strongestImpact = Math.max(this.strongestImpact, impulse);
+
+    const report: ImpactReport = {
+      targetName: destructible.definition.displayName,
+      intensity: impulse,
+      threshold: destructible.definition.minimumImpactThreshold,
+      qualifies: result !== null,
+      state: destructible.state,
+      destroyed: destructible.isDestroyed,
+    };
+    for (const listener of this.impactListeners) {
+      listener(report);
+    }
+  }
+
+  /** Projette l'objet detruit dans le sens du choc, avec une composante verticale cartoon. */
+  private scatter(destructible: DestructibleObject, strength: number, normal: Vector3 | null): void {
+    if (strength <= 0) {
+      return;
+    }
+    const direction = normal ? normal.clone().scaleInPlace(-1) : new Vector3(0, 1, 0);
+    direction.y += 0.6;
+    if (direction.lengthSquared() === 0) {
+      return;
+    }
+    destructible.applyImpulse(direction.normalize().scaleInPlace(strength));
   }
 
   private publish(result: DestructionResult, destructible: DestructibleObject): void {
@@ -102,19 +167,14 @@ export class DestructionService {
       return;
     }
 
-    for (const section of building.onSectionDestroyed()) {
-      if (this.destroyedIds.has(section.id)) {
+    for (const collapsed of building.onSectionDestroyed()) {
+      if (this.destroyedIds.has(collapsed.result.id)) {
         continue;
       }
-      this.destroyedIds.add(section.id);
-      this.debris.track(section);
+      this.destroyedIds.add(collapsed.result.id);
+      this.debris.track(collapsed.section);
       for (const listener of this.listeners) {
-        listener({
-          id: section.id,
-          definition: section.definition,
-          state: "Destroyed",
-          destroyed: true,
-        });
+        listener(collapsed.result);
       }
     }
   }

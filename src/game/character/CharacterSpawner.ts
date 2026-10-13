@@ -11,11 +11,11 @@ import {
   Vector3,
 } from "@babylonjs/core";
 import { characterConfig } from "../../data/config/gameplayConfig";
+
 import type {
   RagdollDefinition,
   RagdollPartDefinition,
-} from "../../data/content/characters/characterTypes";
-import type { Vector3Like } from "../../data/content/levels/levelTypes";
+} from "../../data/content/characters/characterTypes";import type { Vector3Like } from "../../data/content/levels/levelTypes";
 
 const DEG_TO_RAD = Math.PI / 180;
 
@@ -31,6 +31,14 @@ export interface LaunchedCharacter {
   readonly totalMass: number;
 }
 
+export interface SpawnProfile {
+  readonly definition: RagdollDefinition;
+  readonly massScale: number;
+  readonly restitution: number;
+  readonly friction: number;
+  readonly tint: string | null;
+}
+
 /**
  * Cree les personnages lances sous forme de pantins articules (spec 6.2) et conserve ceux des
  * tirs precedents (spec 6.3). Les personnages ne meurent jamais et restent des obstacles.
@@ -40,24 +48,21 @@ export class CharacterSpawner {
   private readonly launched: LaunchedCharacter[] = [];
   private spawnCount = 0;
 
-  constructor(
-    private readonly scene: Scene,
-    private readonly definition: RagdollDefinition,
-  ) {}
+  constructor(private readonly scene: Scene) {}
 
   get count(): number {
     return this.launched.length;
   }
 
-  spawn(origin: Vector3Like): LaunchedCharacter {
+  spawn(origin: Vector3Like, profile: SpawnProfile): LaunchedCharacter {
     const index = this.spawnCount++;
     const parts = new Map<string, RagdollPart>();
 
-    for (const definition of this.definition.parts) {
-      parts.set(definition.id, this.createPart(definition, origin, index));
+    for (const definition of profile.definition.parts) {
+      parts.set(definition.id, this.createPart(definition, origin, index, profile));
     }
 
-    for (const joint of this.definition.joints) {
+    for (const joint of profile.definition.joints) {
       const parent = parts.get(joint.parentId);
       const child = parts.get(joint.childId);
       if (!parent || !child) {
@@ -70,9 +75,9 @@ export class CharacterSpawner {
     }
 
     const orderedParts = [...parts.values()];
-    const root = parts.get(this.definition.rootPartId);
+    const root = parts.get(profile.definition.rootPartId);
     if (!root) {
-      throw new Error(`Partie racine introuvable : ${this.definition.rootPartId}`);
+      throw new Error(`Partie racine introuvable : ${profile.definition.rootPartId}`);
     }
 
     const character: LaunchedCharacter = {
@@ -110,6 +115,7 @@ export class CharacterSpawner {
     definition: RagdollPartDefinition,
     origin: Vector3Like,
     index: number,
+    profile: SpawnProfile,
   ): RagdollPart {
     const name = `${definition.id}_${index}`;
     const mesh = createPartMesh(this.scene, name, definition);
@@ -118,20 +124,17 @@ export class CharacterSpawner {
       origin.y + definition.offset.y,
       origin.z + definition.offset.z,
     );
-    mesh.material = this.materialFor(definition.color);
+    mesh.material = this.materialFor(profile.tint ?? definition.color);
 
+    const mass = definition.mass * profile.massScale;
     const aggregate = new PhysicsAggregate(
       mesh,
       shapeTypeFor(definition),
-      {
-        mass: definition.mass,
-        restitution: characterConfig.restitution,
-        friction: characterConfig.friction,
-      },
+      { mass, restitution: profile.restitution, friction: profile.friction },
       this.scene,
     );
 
-    return { mesh, aggregate, mass: definition.mass };
+    return { mesh, aggregate, mass };
   }
 
   private materialFor(color: string): StandardMaterial {

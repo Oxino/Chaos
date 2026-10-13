@@ -5,14 +5,20 @@ import {
   PhysicsShapeType,
   type Scene,
   StandardMaterial,
+  Vector3,
 } from "@babylonjs/core";
 import type {
   BuildingDefinition,
   BuildingPlacement,
 } from "../../data/content/destructibles/buildingTypes";
 import type { DestructibleDefinition } from "../../data/content/destructibles/destructibleTypes";
-import { DestructibleObject, type DestructibleMaterials } from "./DestructibleObject";
+import { DestructibleObject, type DestructibleMaterials, type DestructionResult } from "./DestructibleObject";
 import { shouldCollapse } from "./collapseMath";
+
+export interface CollapsedSection {
+  readonly section: DestructibleObject;
+  readonly result: DestructionResult;
+}
 
 /**
  * Batiment compose de sections preconstruites empilees (spec 6.4). Une section qui cede se
@@ -42,8 +48,8 @@ export class DestructibleBuilding {
     return this.sectionIds.has(sectionId);
   }
 
-  /** Renvoie les sections qui viennent de ceder par effondrement, pour le budget de debris. */
-  onSectionDestroyed(): readonly DestructibleObject[] {
+  /** Renvoie les sections qui viennent de ceder par effondrement, pour le score et les debris. */
+  onSectionDestroyed(): readonly CollapsedSection[] {
     this.destroyedSections += 1;
 
     if (
@@ -54,11 +60,20 @@ export class DestructibleBuilding {
     }
 
     this.collapsed = true;
-    const collapsing: DestructibleObject[] = [];
-    for (const section of this.sections) {
-      if (section.forceDestroy()) {
-        collapsing.push(section);
+    const collapsing: CollapsedSection[] = [];
+    // Direction commune : la tour part d'un bloc d'un cote, comme un effondrement scenarise.
+    const angle = Math.random() * Math.PI * 2;
+    const heading = new Vector3(Math.cos(angle), 0, Math.sin(angle));
+
+    for (const [floor, section] of this.sections.entries()) {
+      const result = section.forceDestroy();
+      if (!result) {
+        continue;
       }
+      // Plus l'etage est haut, plus il est projete loin.
+      const strength = this.definition.collapseImpulsePerFloor * (floor + 1);
+      section.applyImpulse(heading.scale(strength));
+      collapsing.push({ section, result });
     }
     return collapsing;
   }
@@ -92,6 +107,8 @@ export function createBuilding(
     scoreValue: definition.sectionScoreValue,
     staticUntilDestroyed: true,
     dynamicMass: definition.sectionMass,
+    // Les sections recoivent deja la poussee d'effondrement de la tour.
+    destructionImpulse: 0,
   };
 
   for (let floor = 0; floor < definition.floors; floor += 1) {

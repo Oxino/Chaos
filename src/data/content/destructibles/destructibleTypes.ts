@@ -23,4 +23,9 @@ export interface DestructibleDefinition {
   readonly staticUntilDestroyed: boolean;
   /** Masse appliquee quand l'objet bascule en corps dynamique. */
   readonly dynamicMass: number;
+  /**
+   * Impulsion de dispersion appliquee a la destruction, en N.s. C'est elle qui transforme un
+   * objet detruit en projectile et rend les reactions en chaine possibles (spec 2.3, 6.1).
+   */
+  readonly destructionImpulse: number;
 }

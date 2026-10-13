@@ -8,6 +8,9 @@ import {
   TextBlock,
 } from "@babylonjs/gui";
 import { aimConfig } from "../data/config/gameplayConfig";
+import type { ImpactReport } from "../game/destruction/DestructionService";
+import { ImpactIndicator } from "./ImpactIndicator";
+import { ResultsPanel, type SessionResults } from "./ResultsPanel";
 
 export interface PrototypeHudActions {
   readonly onLaunch: () => void;
@@ -15,7 +18,6 @@ export interface PrototypeHudActions {
   readonly onReset: () => void;
   readonly onPowerChanged: (ratio: number) => void;
 }
-
 export type HudActionMode = "launch" | "end";
 
 /** HUD provisoire de la Phase 1. Textes joueur en francais (spec 15.6). */
@@ -25,6 +27,8 @@ export class PrototypeHud {
   private readonly powerLabel: TextBlock;
   private readonly powerSlider: Slider;
   private readonly actionButton: Button;
+  private readonly impactIndicator: ImpactIndicator;
+  private readonly resultsPanel: ResultsPanel;
   private actionMode: HudActionMode = "launch";
 
   constructor(scene: Scene, actions: PrototypeHudActions) {
@@ -97,6 +101,29 @@ export class PrototypeHud {
     );
 
     this.powerLabel.text = formatPower(this.powerSlider.value);
+    this.impactIndicator = new ImpactIndicator(this.texture);
+    this.resultsPanel = new ResultsPanel(this.texture, actions.onReset);
+  }
+
+  showResults(results: SessionResults): void {
+    this.impactIndicator.clear();
+    this.resultsPanel.show(results);
+  }
+
+  hideResults(): void {
+    this.resultsPanel.hide();
+  }
+
+  showImpact(report: ImpactReport): void {
+    this.impactIndicator.show(report);
+  }
+
+  clearImpact(): void {
+    this.impactIndicator.clear();
+  }
+
+  update(deltaMs: number): void {
+    this.impactIndicator.update(deltaMs);
   }
 
   setActionMode(mode: HudActionMode): void {
@@ -114,6 +141,11 @@ export class PrototypeHud {
   setPowerEnabled(enabled: boolean): void {
     this.powerSlider.isEnabled = enabled;
     this.powerSlider.alpha = enabled ? 1 : 0.45;
+  }
+
+  setActionEnabled(enabled: boolean): void {
+    this.actionButton.isEnabled = enabled;
+    this.actionButton.alpha = enabled ? 1 : 0.45;
   }
 
   setStatus(message: string): void {

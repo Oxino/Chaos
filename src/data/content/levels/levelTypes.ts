@@ -27,6 +27,10 @@ export interface BlockoutBox {
 export interface LevelBlockout {
   readonly id: string;
   readonly displayName: string;
+  /** Nombre de tirs de la partie (spec 4.3). */
+  readonly shotsAllowed: number;
+  /** Score minimum pour debloquer le niveau suivant (spec 8.5). */
+  readonly targetScore: number;
   readonly groundSize: number;
   readonly groundColor: string;
   readonly launcher: LauncherAnchor;

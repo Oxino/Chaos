@@ -14,7 +14,10 @@ export const destructibleCatalog: Readonly<Record<string, DestructibleDefinition
     damageScale: 0.01,
     scoreValue: 300,
     staticUntilDestroyed: false,
-    dynamicMass: 1200,
+    // Physique arcade exageree (spec 6.1) : une voiture doit pouvoir etre projetee loin et
+    // devenir elle-meme un projectile, sinon aucune reaction en chaine n'est possible.
+    dynamicMass: 350,
+    destructionImpulse: 4200,
   },
   lamppost: {
     id: "lamppost",
@@ -26,6 +29,7 @@ export const destructibleCatalog: Readonly<Record<string, DestructibleDefinition
     scoreValue: 80,
     staticUntilDestroyed: true,
     dynamicMass: 280,
+    destructionImpulse: 1600,
   },
   sign: {
     id: "sign",
@@ -37,5 +41,6 @@ export const destructibleCatalog: Readonly<Record<string, DestructibleDefinition
     scoreValue: 50,
     staticUntilDestroyed: true,
     dynamicMass: 90,
+    destructionImpulse: 700,
   },
 };

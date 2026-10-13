@@ -16,6 +16,8 @@ export interface BuildingDefinition {
   readonly sectionMass: number;
   /** Proportion de sections detruites a partir de laquelle la tour s'effondre entierement. */
   readonly collapseRatio: number;
+  /** Impulsion laterale par etage lors de l'effondrement, en N.s. */
+  readonly collapseImpulsePerFloor: number;
   readonly color: string;
 }
 

@@ -12,6 +12,7 @@ const car: DestructibleDefinition = {
   scoreValue: 300,
   staticUntilDestroyed: false,
   dynamicMass: 1200,
+  destructionImpulse: 0,
 };
 
 const building: DestructibleDefinition = { ...car, id: "building", stages: 4 };

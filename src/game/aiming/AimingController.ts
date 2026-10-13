@@ -2,6 +2,7 @@ import type { ArcRotateCamera } from "@babylonjs/core";
 import { aimConfig, launcherConfig } from "../../data/config/gameplayConfig";
 import { physicsConfig } from "../../data/config/engineConfig";
 import type { LauncherAnchor, Vector3Like } from "../../data/content/levels/levelTypes";
+import type { BuildSelectionService } from "../build/BuildSelectionService";
 import { computeTrajectory, type TrajectoryResult } from "../shot/trajectory";
 import {
   clampAngleDeg,
@@ -21,7 +22,7 @@ export class AimingController {
   constructor(
     private readonly camera: ArcRotateCamera,
     private readonly anchor: LauncherAnchor,
-    private readonly characterMass: number,
+    private readonly build: BuildSelectionService,
   ) {
     this.restYawDeg = yawPitchDegFromDirection(anchor.restDirection).yawDeg;
   }
@@ -60,7 +61,7 @@ export class AimingController {
   }
 
   getLaunchSpeed(): number {
-    return (this.powerRatio * launcherConfig.maxLaunchImpulse) / this.characterMass;
+    return this.build.launchSpeed(this.powerRatio);
   }
 
   getTrajectory(groundY = 0): TrajectoryResult {
