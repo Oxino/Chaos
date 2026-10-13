@@ -44,3 +44,31 @@ export function createEmptyBonuses(): SkillBonuses {
     comboScore: 0,
   };
 }
+
+/** Resume lisible des bonus actifs, pour que le joueur voie l'effet de ses achats. */
+export function describeBonuses(bonuses: SkillBonuses): readonly string[] {
+  const parts: string[] = [];
+  if (bonuses.launchPower > 0) {
+    parts.push(`Puissance +${percent(bonuses.launchPower)}`);
+  }
+  if (bonuses.impact > 0) {
+    parts.push(`Impact +${percent(bonuses.impact)}`);
+  }
+  if (bonuses.bounce > 0) {
+    parts.push(`Rebond +${bonuses.bounce.toFixed(2)}`);
+  }
+  if (bonuses.explosionRadius > 0) {
+    parts.push(`Rayon +${percent(bonuses.explosionRadius)}`);
+  }
+  if (bonuses.destructionScore > 0) {
+    parts.push(`Score +${percent(bonuses.destructionScore)}`);
+  }
+  if (bonuses.comboScore > 0) {
+    parts.push(`Combo +${percent(bonuses.comboScore)}`);
+  }
+  return parts;
+}
+
+function percent(value: number): string {
+  return `${Math.round(value * 100)} %`;
+}

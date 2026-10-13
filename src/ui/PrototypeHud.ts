@@ -62,7 +62,7 @@ export class PrototypeHud {
     this.statusText.outlineColor = "#10131a";
     this.statusText.outlineWidth = 4;
     this.statusText.width = "640px";
-    this.statusText.height = "150px";
+    this.statusText.height = "215px";
     this.statusText.paddingLeft = "16px";
     this.statusText.paddingTop = "16px";
     this.statusText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
@@ -152,7 +152,7 @@ export class PrototypeHud {
     this.skillButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
     this.skillButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
     this.skillButton.left = "16px";
-    this.skillButton.top = "170px";
+    this.skillButton.top = "225px";
     this.texture.addControl(this.skillButton);
 
     this.buildPanel = new StackPanel("buildPanel");
@@ -228,8 +228,12 @@ export class PrototypeHud {
     return this.skillPanel.isVisible;
   }
 
-  renderSkills(statuses: readonly SkillNodeStatus[], availablePoints: number): void {
-    this.skillPanel.render(statuses, availablePoints);
+  renderSkills(
+    statuses: readonly SkillNodeStatus[],
+    availablePoints: number,
+    activeBonuses: readonly string[],
+  ): void {
+    this.skillPanel.render(statuses, availablePoints, activeBonuses);
   }
 
   setSkillButtonLabel(availablePoints: number): void {

@@ -27,6 +27,7 @@ const BLOCKER_LABELS: Record<string, string> = {
 export class SkillPanel {
   private readonly panel: Rectangle;
   private readonly pointsText: TextBlock;
+  private readonly bonusText: TextBlock;
   private readonly list: StackPanel;
   private readonly rows: { container: StackPanel; label: TextBlock; button: Button }[] = [];
 
@@ -37,7 +38,7 @@ export class SkillPanel {
   ) {
     this.panel = new Rectangle("skillPanel");
     this.panel.width = "560px";
-    this.panel.height = "600px";
+    this.panel.height = "640px";
     this.panel.thickness = 0;
     this.panel.cornerRadius = 16;
     this.panel.background = "#10131aee";
@@ -60,6 +61,14 @@ export class SkillPanel {
     this.pointsText.fontSize = 19;
     this.pointsText.color = "#5fd38d";
     layout.addControl(this.pointsText);
+
+    this.bonusText = new TextBlock("skillBonuses");
+    this.bonusText.height = "46px";
+    this.bonusText.width = "520px";
+    this.bonusText.fontSize = 16;
+    this.bonusText.color = "#ffd24a";
+    this.bonusText.textWrapping = true;
+    layout.addControl(this.bonusText);
 
     const scroll = new ScrollViewer("skillScroll");
     scroll.width = "520px";
@@ -93,8 +102,16 @@ export class SkillPanel {
     this.panel.isVisible = visible;
   }
 
-  render(statuses: readonly SkillNodeStatus[], availablePoints: number): void {
+  render(
+    statuses: readonly SkillNodeStatus[],
+    availablePoints: number,
+    activeBonuses: readonly string[],
+  ): void {
     this.pointsText.text = `Points disponibles : ${availablePoints}`;
+    this.bonusText.text =
+      activeBonuses.length > 0
+        ? `Bonus actifs : ${activeBonuses.join("  -  ")}`
+        : "Aucun bonus actif";
     this.ensureRows(statuses.length);
 
     for (const [index, status] of statuses.entries()) {

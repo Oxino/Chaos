@@ -35,6 +35,7 @@ import { ScoreService } from "../game/score/ScoreService";
 import { SaveService } from "../game/save/SaveService";
 import { SecretService } from "../game/secret/SecretService";
 import { SkillTreeService } from "../game/skill/SkillTreeService";
+import { describeBonuses } from "../data/content/skills/skillTypes";
 import { ShotController, type ShotState } from "../game/shot/ShotController";
 import { TrajectoryPreview } from "../rendering/TrajectoryPreview";
 import { AbilityEffects } from "../rendering/effects/AbilityEffects";
@@ -433,7 +434,11 @@ export class GameApp {
     this.refreshAbilityHud(isAiming);
     this.hud.setSkillButtonLabel(this.skills.availablePoints);
     if (this.hud.skillPanelOpen) {
-      this.hud.renderSkills(this.skills.statuses, this.skills.availablePoints);
+      this.hud.renderSkills(
+        this.skills.statuses,
+        this.skills.availablePoints,
+        describeBonuses(this.skills.bonuses),
+      );
     }
     this.hud.setStatus(this.buildStatusLines(trajectory.range).join("\n"));
   }
@@ -463,6 +468,11 @@ export class GameApp {
 
     if (this.combo.currentChain > 1) {
       lines.push(`Combo x${this.combo.currentMultiplier} (${this.combo.currentChain} destructions)`);
+    }
+
+    const bonuses = describeBonuses(this.skills.bonuses);
+    if (bonuses.length > 0) {
+      lines.push(`Competences : ${bonuses.join(" - ")}`);
     }
 
     lines.push(
