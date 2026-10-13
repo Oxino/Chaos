@@ -17,6 +17,14 @@ export interface PrototypeHudActions {
   readonly onEndShot: () => void;
   readonly onReset: () => void;
   readonly onPowerChanged: (ratio: number) => void;
+  readonly onCycleCharacter: () => void;
+  readonly onCycleItem: () => void;
+}
+
+export interface BuildSummary {
+  readonly characterLabel: string;
+  readonly itemLabel: string;
+  readonly passivesLabel: string;
 }
 export type HudActionMode = "launch" | "end";
 
@@ -29,6 +37,10 @@ export class PrototypeHud {
   private readonly actionButton: Button;
   private readonly impactIndicator: ImpactIndicator;
   private readonly resultsPanel: ResultsPanel;
+  private readonly buildPanel: StackPanel;
+  private readonly characterButton: Button;
+  private readonly itemButton: Button;
+  private readonly passivesText: TextBlock;
   private actionMode: HudActionMode = "launch";
 
   constructor(scene: Scene, actions: PrototypeHudActions) {
@@ -103,6 +115,49 @@ export class PrototypeHud {
     this.powerLabel.text = formatPower(this.powerSlider.value);
     this.impactIndicator = new ImpactIndicator(this.texture);
     this.resultsPanel = new ResultsPanel(this.texture, actions.onReset);
+
+    this.buildPanel = new StackPanel("buildPanel");
+    this.buildPanel.width = "240px";
+    this.buildPanel.height = "190px";
+    this.buildPanel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+    this.buildPanel.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+    this.buildPanel.paddingLeft = "16px";
+    this.buildPanel.paddingBottom = "24px";
+    this.texture.addControl(this.buildPanel);
+
+    this.characterButton = this.createButton(
+      "characterButton",
+      "Personnage",
+      "#3f8f6b",
+      actions.onCycleCharacter,
+    );
+    this.itemButton = this.createButton("itemButton", "Objet", "#4a5873", actions.onCycleItem);
+    this.characterButton.width = "220px";
+    this.itemButton.width = "220px";
+    this.characterButton.paddingBottom = "8px";
+    this.itemButton.paddingBottom = "8px";
+    this.buildPanel.addControl(this.characterButton);
+    this.buildPanel.addControl(this.itemButton);
+
+    this.passivesText = new TextBlock("passivesText");
+    this.passivesText.height = "26px";
+    this.passivesText.fontSize = 16;
+    this.passivesText.color = "#ffd24a";
+    this.passivesText.outlineColor = "#10131a";
+    this.passivesText.outlineWidth = 4;
+    this.buildPanel.addControl(this.passivesText);
+  }
+
+  setBuild(summary: BuildSummary): void {
+    setButtonLabel(this.characterButton, summary.characterLabel);
+    setButtonLabel(this.itemButton, summary.itemLabel);
+    this.passivesText.text = summary.passivesLabel;
+  }
+
+  setBuildEnabled(enabled: boolean): void {
+    this.buildPanel.alpha = enabled ? 1 : 0.4;
+    this.characterButton.isEnabled = enabled;
+    this.itemButton.isEnabled = enabled;
   }
 
   showResults(results: SessionResults): void {
@@ -179,4 +234,10 @@ export class PrototypeHud {
 
 function formatPower(ratio: number): string {
   return `Puissance : ${Math.round(ratio * 100)} %`;
+}
+
+function setButtonLabel(button: Button, label: string): void {
+  if (button.textBlock) {
+    button.textBlock.text = label;
+  }
 }

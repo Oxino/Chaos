@@ -347,6 +347,8 @@ Les compétences ne doivent pas introduire un pilotage directionnel permanent en
 ## 10.1 Build
 Un tir = 1 lanceur + 1 personnage + 1 objet. Le joueur choisit le build avant chaque tir et peut adapter sa stratégie à l'état du terrain.
 
+**État actuel [VALIDÉ]** : le personnage et l'objet se changent depuis le HUD pendant la visée, et sont verrouillés pendant le vol. Les statistiques du build modifient la masse, le rebond, la friction, la puissance de lancement et le multiplicateur de score. **L'aperçu de trajectoire reflète immédiatement le build** (§5.2, §20.1).
+
 ## 10.2 Lanceurs
 - **[VALIDÉ] Fronde géante :** premier lanceur.
 - **[VALIDÉ]** Le lanceur est placé à un point d'ancrage fixe du niveau ; seule son orientation de visée change (§5.3).
@@ -382,6 +384,8 @@ Autres idées : bombe, ballon à rebond, réacteur activable en vol, bonbonne ex
 - Maximum 2 passifs combinés provenant de ces emplacements.
 - Une capacité active est une catégorie séparée, pas un deuxième passif caché.
 - Aucun plafond de passifs de lanceur n'a été confirmé ; ne pas inventer une règle de collection à ce sujet.
+
+**Garantie d'implémentation** : la limite est **structurelle**, pas conventionnelle. Un personnage et un objet portent chacun un champ `passive` unique, donc il est impossible d'en cumuler plus de deux par construction. Les effets sont des modificateurs typés (rebond, score, masse, puissance) combinés par une fonction pure et testée.
 
 ## 10.6 Doublons [VALIDÉ]
 Les personnages, objets et lanceurs peuvent être améliorés avec des doublons. Les améliorations doivent rester **petites** et statistiques. Les plafonds, niveaux et compensations au niveau maximal sont à définir. La collection ne doit pas devenir nécessaire pour franchir les niveaux.
@@ -591,6 +595,8 @@ Valeurs temporaires au sens de l'obligation 7 du §22. Elles vivent dans `src/da
 | Valeurs de score | voiture 300, section d'immeuble 200, lampadaire 80, panneau 50 | §8.2 |
 | Masse des voitures | 350 kg, volontairement basse pour qu'elles soient projetables | §6.1 |
 | Impulsion de dispersion | voiture 4 200, lampadaire 1 600, panneau 700 N·s | §6.4 |
+| Personnages | Pantin (neutre), Chat (masse x0,55, rebond +30 %), Coffre-fort (masse x1,8, score x2) | §10.3 |
+| Objets | Pierre (masse x1,35, rebond -20 %), Ballon (masse x0,85, rebond +35 %), Enclume (masse x1,8, puissance x1,45) | §10.4 |
 | Points de l'aperçu de trajectoire | 32, tronqués au premier obstacle détecté par raycast | §5.2 |
 | Puissance par défaut / minimale | 70 % / 5 % | §5.1 |
 | Plage d'inclinaison de la vue exploitée | 45° à 85°, mappée sur un angle de tir de 60° à 10° | §5.1, §5.3 |
@@ -693,6 +699,9 @@ Nombre de tirs selon niveau, score direct, combo de base, objectif de score, ré
 
 ## Phase 4 — Builds
 Plusieurs personnages, quelques objets/passifs, sélection avant chaque tir et une capacité activable en vol. Feedback spécifique.
+
+- **4a [TERMINÉ]** : catalogues de 3 personnages et 3 objets, passifs typés, résolution de build pure et testée, sélection au HUD avant chaque tir, effets visibles sur la trajectoire, la physique et le score.
+- **4b [À VENIR]** : capacité activable en vol et feedback dédié.
 
 ## Phase 5 — Progression
 XP, premières compétences, quêtes et secrets, déblocage du niveau suivant.

@@ -22,11 +22,6 @@ export const aimConfig = {
   reticleDiameter: 6,
 } as const;
 
-export const characterConfig = {
-  restitution: 0.35,
-  friction: 0.5,
-} as const;
-
 export const shotConfig = {
   /** Seuils d'immobilite avant la fin automatique d'un tir (spec 5.6). */
   linearSleepSpeed: 0.3,

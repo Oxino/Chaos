@@ -10,8 +10,7 @@ import {
 } from "@babylonjs/core";
 import { engineConfig, physicsConfig } from "../data/config/engineConfig";
 import { destructionConfig, scoreConfig } from "../data/config/gameplayConfig";import { prototypeDistrict } from "../data/content/levels/prototypeDistrict";
-import { prototypeRagdoll } from "../data/content/characters/prototypeRagdoll";
-import { totalMassOf } from "../data/content/characters/characterTypes";
+import { describePassive } from "../data/content/passives/passiveTypes";
 import { AimingController } from "../game/aiming/AimingController";
 import { BuildSelectionService } from "../game/build/BuildSelectionService";
 import { clipTrajectoryToScene } from "../game/aiming/clipTrajectoryToScene";
@@ -88,6 +87,8 @@ export class GameApp {
       onEndShot: () => this.endShot(),
       onReset: () => this.reset(),
       onPowerChanged: (ratio) => this.systems?.aiming.setPower(ratio),
+      onCycleCharacter: () => this.systems?.build.cycleCharacter(),
+      onCycleItem: () => this.systems?.build.cycleItem(),
     });
 
     window.addEventListener("resize", this.handleResize);
@@ -235,6 +236,12 @@ export class GameApp {
     this.hud.setActionMode(shots.canEndManually ? "end" : "launch");
     this.hud.setActionEnabled(shots.canLaunch || shots.canEndManually);
     this.hud.setPowerEnabled(isAiming && !shots.isSessionComplete);
+    this.hud.setBuildEnabled(isAiming && !shots.isSessionComplete);
+    this.hud.setBuild({
+      characterLabel: this.systems.build.character.displayName,
+      itemLabel: this.systems.build.item.displayName,
+      passivesLabel: `${describePassive(this.systems.build.character.passive)} / ${describePassive(this.systems.build.item.passive)}`,
+    });
     this.hud.setStatus(this.buildStatusLines(trajectory.range).join("\n"));
   }
 

@@ -10,8 +10,6 @@ import {
   StandardMaterial,
   Vector3,
 } from "@babylonjs/core";
-import { characterConfig } from "../../data/config/gameplayConfig";
-
 import type {
   RagdollDefinition,
   RagdollPartDefinition,
