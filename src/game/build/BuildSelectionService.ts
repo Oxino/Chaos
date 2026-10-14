@@ -3,6 +3,9 @@ import { characterCatalog } from "../../data/content/characters/characterCatalog
 import type { CharacterDefinition } from "../../data/content/characters/characterDefinition";
 import { totalMassOf } from "../../data/content/characters/characterTypes";
 import { itemCatalog, type ItemDefinition } from "../../data/content/items/itemCatalog";
+import type { ActiveAbility } from "../../data/content/items/abilityTypes";
+import type { UpgradeData } from "../save/saveSchema";
+import { collectionConfig } from "../../data/config/collectionConfig";
 import { resolveBuild, type ResolvedBuild } from "./buildMath";
 
 /**
@@ -14,11 +17,16 @@ export class BuildSelectionService {
   private itemIndex = 0;
   private launchPowerBonus = 0;
   private bounceBonus = 0;
+  private collectionUpgrades: UpgradeData = { launchers: {}, characters: {}, items: {} };
 
   /** Bonus issus de l'arbre de competences (spec 9.2). */
   applySkillBonuses(launchPowerBonus: number, bounceBonus: number): void {
     this.launchPowerBonus = launchPowerBonus;
     this.bounceBonus = bounceBonus;
+  }
+
+  applyCollectionUpgrades(upgrades: UpgradeData): void {
+    this.collectionUpgrades = upgrades;
   }
 
   get character(): CharacterDefinition {
@@ -31,7 +39,33 @@ export class BuildSelectionService {
 
   get resolved(): ResolvedBuild {
     const base = resolveBuild(this.character, this.item);
-    return { ...base, restitution: Math.min(0.9, base.restitution + this.bounceBonus) };
+    const characterUpgrade = upgradeMultiplier(
+      this.collectionUpgrades.characters[this.character.id] ?? 0,
+    );
+    const itemUpgrade = upgradeMultiplier(this.collectionUpgrades.items[this.item.id] ?? 0);
+    return {
+      ...base,
+      restitution: Math.min(0.9, base.restitution * characterUpgrade + this.bounceBonus),
+      launchImpulseScale: base.launchImpulseScale * itemUpgrade,
+      scoreMultiplier: base.scoreMultiplier * characterUpgrade,
+    };
+  }
+
+  get ability(): ActiveAbility | null {
+    const ability = this.item.ability;
+    if (!ability) {
+      return null;
+    }
+    const multiplier = upgradeMultiplier(this.collectionUpgrades.items[this.item.id] ?? 0);
+    if (ability.kind === "bomb") {
+      return {
+        ...ability,
+        radius: ability.radius * multiplier,
+        impulse: ability.impulse * multiplier,
+        impactStrength: ability.impactStrength * multiplier,
+      };
+    }
+    return { ...ability, impulsePerSecond: ability.impulsePerSecond * multiplier };
   }
 
   get characterMass(): number {
@@ -50,6 +84,7 @@ export class BuildSelectionService {
   launchSpeed(power: number): number {
     const raw =
       (launcherConfig.maxLaunchImpulse *
+        upgradeMultiplier(this.collectionUpgrades.launchers.launcher_giant_slingshot ?? 0) *
         this.resolved.launchImpulseScale *
         (1 + this.launchPowerBonus) *
         power) /
@@ -61,4 +96,8 @@ export class BuildSelectionService {
   launchImpulse(power: number): number {
     return this.launchSpeed(power) * this.characterMass;
   }
+}
+
+export function upgradeMultiplier(level: number): number {
+  return 1 + Math.max(0, level) * collectionConfig.duplicateBonusPerLevel;
 }

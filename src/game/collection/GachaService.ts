@@ -1,0 +1,60 @@
+import { collectionConfig } from "../../data/config/collectionConfig";
+import { characterCatalog } from "../../data/content/characters/characterCatalog";
+import { itemCatalog } from "../../data/content/items/itemCatalog";
+import { launcherCatalog } from "../../data/content/launchers/launcherCatalog";
+import {
+  type CollectionCategory,
+  type SaveData,
+  withCollectionItem,
+  withCurrency,
+  withUpgradeLevel,
+} from "../save/saveSchema";
+import type { GachaPoolEntry, GachaReward } from "./collectionTypes";
+
+const pools: Record<CollectionCategory, readonly GachaPoolEntry[]> = {
+  launchers: launcherCatalog.map(({ id }) => ({ id, category: "launchers" })),
+  characters: characterCatalog.map(({ id }) => ({ id, category: "characters" })),
+  items: itemCatalog.map(({ id }) => ({ id, category: "items" })),
+};
+
+export class GachaService {
+  constructor(private readonly random: () => number = Math.random) {}
+
+  draw(save: SaveData, category: CollectionCategory): GachaReward | null {
+    if (save.currency < collectionConfig.gachaCost) {
+      return null;
+    }
+
+    const pool = pools[category];
+    if (pool.length === 0) {
+      return null;
+    }
+
+    const index = Math.min(pool.length - 1, Math.floor(this.random() * pool.length));
+    const itemId = pool[index]?.id;
+    if (!itemId) {
+      return null;
+    }
+
+    const duplicate = (save.inventory[category][itemId] ?? 0) > 0;
+    let updated = withCurrency(save, -collectionConfig.gachaCost);
+    updated = withCollectionItem(updated, category, itemId);
+    if (duplicate) {
+      updated = withUpgradeLevel(
+        updated,
+        category,
+        itemId,
+        collectionConfig.maxDuplicateUpgradeLevel,
+      );
+    }
+
+    return {
+      category,
+      itemId,
+      duplicate,
+      upgradeLevel: updated.upgrades[category][itemId] ?? 0,
+      currencyRemaining: updated.currency,
+      save: updated,
+    };
+  }
+}

@@ -7,6 +7,7 @@ import {
   withBestScore,
   withCompletedQuests,
   withDiscoveredSecrets,
+  withCurrency,
   withSkillRanks,
   withXp,
 } from "./saveSchema";
@@ -53,6 +54,33 @@ export class SaveService {
     return this.data.skillRanks;
   }
 
+  get currency(): number {
+    return this.data.currency;
+  }
+
+  get inventory(): SaveData["inventory"] {
+    return this.data.inventory;
+  }
+
+  get upgrades(): SaveData["upgrades"] {
+    return this.data.upgrades;
+  }
+
+  get snapshot(): SaveData {
+    return this.data;
+  }
+
+  async saveCollection(data: SaveData): Promise<void> {
+    this.data = data;
+    await this.persist();
+  }
+
+  async replace(raw: unknown): Promise<SaveData> {
+    this.data = migrateSave(raw);
+    await this.persist();
+    return this.data;
+  }
+
   /** Les competences sont ecrites des l'achat, hors du cycle de fin de partie. */
   async saveSkillRanks(ranks: Readonly<Record<string, number>>): Promise<void> {
     this.data = withSkillRanks(this.data, ranks);
@@ -67,6 +95,7 @@ export class SaveService {
     levelId: string;
     score: number;
     gainedXp: number;
+    gainedCurrency?: number;
     completedQuestIds: readonly string[];
     discoveredSecretIds: readonly string[];
   }): Promise<boolean> {
@@ -76,6 +105,7 @@ export class SaveService {
     updated = withXp(updated, result.gainedXp);
     updated = withCompletedQuests(updated, result.completedQuestIds);
     updated = withDiscoveredSecrets(updated, result.discoveredSecretIds);
+    updated = withCurrency(updated, result.gainedCurrency ?? 0);
 
     if (updated !== this.data) {
       this.data = updated;

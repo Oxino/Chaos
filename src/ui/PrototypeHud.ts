@@ -13,6 +13,8 @@ import { ImpactIndicator } from "./ImpactIndicator";
 import { ResultsPanel, type SessionResults } from "./ResultsPanel";
 import { SkillPanel } from "./SkillPanel";
 import type { SkillNodeStatus } from "../game/skill/SkillTreeService";
+import { CollectionPanel, type CollectionProfileView } from "./CollectionPanel";
+import type { CollectionCategory } from "../game/save/saveSchema";
 
 export interface PrototypeHudActions {
   readonly onLaunch: () => void;
@@ -24,6 +26,7 @@ export interface PrototypeHudActions {
   readonly onCycleItem: () => void;
   readonly onActivateAbility: () => void;
   readonly onUpgradeSkill: (nodeId: string) => void;
+  readonly onDrawCollection: (category: CollectionCategory) => void;
 }
 
 export interface BuildSummary {
@@ -50,6 +53,8 @@ export class PrototypeHud {
   private readonly secretText: TextBlock;
   private readonly skillPanel: SkillPanel;
   private readonly skillButton: Button;
+  private readonly collectionPanel: CollectionPanel;
+  private readonly collectionButton: Button;
   private secretMs = 0;
   private actionMode: HudActionMode = "launch";
 
@@ -155,6 +160,22 @@ export class PrototypeHud {
     this.skillButton.top = "225px";
     this.texture.addControl(this.skillButton);
 
+    this.collectionPanel = new CollectionPanel(
+      this.texture,
+      actions.onDrawCollection,
+      () => this.collectionPanel.setVisible(false),
+    );
+    this.collectionButton = this.createButton("collectionButton", "Collection", "#3f8f6b", () =>
+      this.collectionPanel.setVisible(!this.collectionPanel.isVisible),
+    );
+    this.collectionButton.width = "200px";
+    this.collectionButton.height = "44px";
+    this.collectionButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+    this.collectionButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    this.collectionButton.left = "16px";
+    this.collectionButton.top = "275px";
+    this.texture.addControl(this.collectionButton);
+
     this.buildPanel = new StackPanel("buildPanel");
     this.buildPanel.width = "240px";
     this.buildPanel.height = "190px";
@@ -241,6 +262,10 @@ export class PrototypeHud {
       this.skillButton,
       availablePoints > 0 ? `Competences (${availablePoints})` : "Competences",
     );
+  }
+
+  renderCollection(profile: CollectionProfileView, message?: string): void {
+    this.collectionPanel.renderProfile(profile, message);
   }
 
   showResults(results: SessionResults): void {

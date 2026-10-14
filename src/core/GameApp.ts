@@ -12,14 +12,15 @@ import {
   Vector3,
 } from "@babylonjs/core";
 import { engineConfig, physicsConfig } from "../data/config/engineConfig";
-import { destructionConfig, progressionConfig, scoreConfig } from "../data/config/gameplayConfig";
+import { destructionConfig, launcherConfig, progressionConfig, scoreConfig } from "../data/config/gameplayConfig";
+import { collectionConfig } from "../data/config/collectionConfig";
 import { levelCatalog } from "../data/content/levels/levelCatalog";
 import type { LevelBlockout } from "../data/content/levels/levelTypes";
 import { describePassive } from "../data/content/passives/passiveTypes";
 import { AbilityController, type AbilityState } from "../game/ability/AbilityController";
 import { AimingController } from "../game/aiming/AimingController";
 import { clipTrajectoryToScene } from "../game/aiming/clipTrajectoryToScene";
-import { BuildSelectionService } from "../game/build/BuildSelectionService";
+import { BuildSelectionService, upgradeMultiplier } from "../game/build/BuildSelectionService";
 import { CameraDirector } from "../game/camera/CameraDirector";
 import { CharacterSpawner } from "../game/character/CharacterSpawner";
 import { DebrisBudget } from "../game/destruction/DebrisBudget";
@@ -33,6 +34,19 @@ import { QuestService } from "../game/quest/QuestService";
 import { ComboChainTracker } from "../game/score/ComboChainTracker";
 import { ScoreService } from "../game/score/ScoreService";
 import { SaveService } from "../game/save/SaveService";
+import { GachaService } from "../game/collection/GachaService";
+import {
+  createEmptySave,
+  withCollectionItem,
+  withCurrency,
+  type CollectionCategory,
+  type SaveData,
+} from "../game/save/saveSchema";
+import { installChaosDebugApi, removeChaosDebugApi } from "../game/save/debugSaveTools";
+import { characterCatalog } from "../data/content/characters/characterCatalog";
+import { totalMassOf } from "../data/content/characters/characterTypes";
+import { itemCatalog } from "../data/content/items/itemCatalog";
+import { launcherCatalog } from "../data/content/launchers/launcherCatalog";
 import { SecretService } from "../game/secret/SecretService";
 import { SkillTreeService } from "../game/skill/SkillTreeService";
 import { describeBonuses } from "../data/content/skills/skillTypes";
@@ -41,6 +55,7 @@ import { TrajectoryPreview } from "../rendering/TrajectoryPreview";
 import { AbilityEffects } from "../rendering/effects/AbilityEffects";
 import { createAimCamera, resetAimCamera } from "../rendering/cameras/createAimCamera";
 import { PrototypeHud } from "../ui/PrototypeHud";
+import type { CollectionProfileView } from "../ui/CollectionPanel";
 import { createHavokPlugin } from "./physics/createHavokPlugin";
 
 const STATE_LABELS: Record<ShotState, string> = {
@@ -79,6 +94,7 @@ export class GameApp {
   private readonly scene: Scene;
   private readonly hud: PrototypeHud;
   private readonly save = new SaveService();
+  private readonly gacha = new GachaService();
   private readonly build = new BuildSelectionService();
   private readonly score = new ScoreService();
   private readonly combo = new ComboChainTracker(
@@ -136,6 +152,7 @@ export class GameApp {
       onCycleItem: () => this.build.cycleItem(),
       onActivateAbility: () => this.activateAbility(),
       onUpgradeSkill: (nodeId) => this.upgradeSkill(nodeId),
+      onDrawCollection: (category) => this.drawCollection(category),
     });
 
     window.addEventListener("resize", this.handleResize);
@@ -147,6 +164,7 @@ export class GameApp {
     this.engine.runRenderLoop(() => this.scene.render());
 
     await this.save.load();
+    await this.ensureStarterCollection();
     const plugin = await createHavokPlugin();
     const { x, y, z } = physicsConfig.gravity;
     this.scene.enablePhysics(new Vector3(x, y, z), plugin);
@@ -154,6 +172,9 @@ export class GameApp {
     this.createLighting();
     this.quests.setKnownCompleted(this.save.completedQuestIds);
     this.skills.load(this.save.skillRanks, this.earnedSkillPoints());
+    this.build.applyCollectionUpgrades(this.save.upgrades);
+    this.refreshCollection();
+    this.installDebugTools();
     this.loadLevel(0);
 
     this.scene.onBeforeRenderObservable.add(() => this.tick());
@@ -162,6 +183,9 @@ export class GameApp {
   dispose(): void {
     window.removeEventListener("resize", this.handleResize);
     window.removeEventListener("keydown", this.handleKeyDown);
+    if (import.meta.env.DEV) {
+      removeChaosDebugApi();
+    }
     this.hud.dispose();
     this.scene.dispose();
     this.engine.dispose();
@@ -317,12 +341,14 @@ export class GameApp {
       .filter((secret) => discoveredSecrets.has(secret.id))
       .reduce((sum, secret) => sum + secret.xpReward, 0);
     const gainedXp = xpFromScore(total, progressionConfig) + questXp + secretXp;
+    const gainedCurrency = Math.floor(total * collectionConfig.currencyPerScorePoint);
 
     void this.save
       .recordSessionResult({
         levelId: level.blockout.id,
         score: total,
         gainedXp,
+        gainedCurrency,
         completedQuestIds: completedQuests.map((quest) => quest.id),
         discoveredSecretIds: [...discoveredSecrets],
       })
@@ -330,6 +356,7 @@ export class GameApp {
         const progress = resolveLevel(this.save.totalXp, progressionConfig);
         this.quests.setKnownCompleted(this.save.completedQuestIds);
         this.refreshSkillPoints();
+        this.refreshCollection();
         this.hud.showResults({
           levelName: level.blockout.displayName,
           total,
@@ -349,6 +376,153 @@ export class GameApp {
           hasNextLevel: this.nextLevelIsUnlocked(),
         });
       });
+  }
+
+  private drawCollection(category: CollectionCategory): void {
+    const reward = this.gacha.draw(this.save.snapshot, category);
+    if (!reward) {
+      this.refreshCollection("Monnaie insuffisante pour un tirage");
+      return;
+    }
+    void this.save.saveCollection(reward.save);
+    this.build.applyCollectionUpgrades(reward.save.upgrades);
+    this.refreshCollection(
+      `${reward.duplicate ? "Doublon" : "Nouveau contenu"} : ${collectionName(category, reward.itemId)}`,
+    );
+  }
+
+  private async ensureStarterCollection(): Promise<void> {
+    let save = this.save.snapshot;
+    for (const id of launcherCatalog.map((entry) => entry.id)) {
+      if (!save.inventory.launchers[id]) {
+        save = withCollectionItem(save, "launchers", id);
+      }
+    }
+    for (const id of characterCatalog.map((entry) => entry.id)) {
+      if (!save.inventory.characters[id]) {
+        save = withCollectionItem(save, "characters", id);
+      }
+    }
+    for (const id of itemCatalog.map((entry) => entry.id)) {
+      if (!save.inventory.items[id]) {
+        save = withCollectionItem(save, "items", id);
+      }
+    }
+    if (save !== this.save.snapshot) {
+      await this.save.saveCollection(save);
+    }
+  }
+
+  private installDebugTools(): void {
+    if (!import.meta.env.DEV) {
+      return;
+    }
+
+    const persistAndRefresh = async (data: SaveData): Promise<SaveData> => {
+      await this.save.replace(data);
+      this.skills.load(this.save.skillRanks, this.earnedSkillPoints());
+      this.applySkillBonuses();
+      this.refreshCollection();
+      return this.save.snapshot;
+    };
+
+    installChaosDebugApi({
+      save: () => this.save.snapshot,
+      setCurrency: (amount) =>
+        persistAndRefresh({ ...this.save.snapshot, currency: Number.isFinite(amount) ? Math.max(0, Math.floor(amount)) : 0 }),
+      addCurrency: (amount) => persistAndRefresh(withCurrency(this.save.snapshot, amount)),
+      setXp: (totalXp) =>
+        persistAndRefresh({
+          ...this.save.snapshot,
+          totalXp: Number.isFinite(totalXp) ? Math.max(0, Math.floor(totalXp)) : 0,
+        }),
+      addItem: (category, itemId, count = 1) => {
+        let updated = this.save.snapshot;
+        for (let index = 0; index < Math.max(0, Math.floor(count)); index += 1) {
+          updated = withCollectionItem(updated, category, itemId);
+        }
+        return persistAndRefresh(updated);
+      },
+      setSkillRank: (skillId, rank) =>
+        persistAndRefresh({
+          ...this.save.snapshot,
+          skillRanks: { ...this.save.skillRanks, [skillId]: Math.max(0, Math.floor(rank)) },
+        }),
+      reset: async () => {
+        await this.save.replace(createEmptySave());
+        await this.ensureStarterCollection();
+        this.skills.load(this.save.skillRanks, this.earnedSkillPoints());
+        this.applySkillBonuses();
+        this.refreshCollection();
+        return this.save.snapshot;
+      },
+    });
+  }
+
+  private refreshCollection(message = ""): void {
+    const progress = resolveLevel(this.save.totalXp, progressionConfig);
+    const entries: CollectionProfileView["entries"] = [
+      ...launcherCatalog.map((launcher) => ({
+        category: "launchers" as const,
+        id: launcher.id,
+        name: launcher.displayName,
+        count: this.save.inventory.launchers[launcher.id] ?? 0,
+        available: (this.save.inventory.launchers[launcher.id] ?? 0) > 0,
+        upgradeLevel: this.save.upgrades.launchers[launcher.id] ?? 0,
+        stats: [
+          `Impulsion ${Math.round(launcherConfig.maxLaunchImpulse * upgradeMultiplier(this.save.upgrades.launchers[launcher.id] ?? 0))} N.s`,
+          `Bonus lancement +${Math.round((upgradeMultiplier(this.save.upgrades.launchers[launcher.id] ?? 0) - 1) * 100)} %`,
+          `Plafond vitesse ${launcherConfig.maxLaunchSpeed} m/s`,
+          `Amplitude ${launcherConfig.horizontalAmplitudeDeg}° / ${launcherConfig.verticalAmplitudeDeg}°`,
+        ],
+      })),
+      ...characterCatalog.map((character) => ({
+        category: "characters" as const,
+        id: character.id,
+        name: character.displayName,
+        count: this.save.inventory.characters[character.id] ?? 0,
+        available: (this.save.inventory.characters[character.id] ?? 0) > 0,
+        upgradeLevel: this.save.upgrades.characters[character.id] ?? 0,
+        stats: [
+          `Masse ${Math.round(totalMassOf(character.ragdoll) * character.massScale)} kg`,
+          `Rebond ${(character.restitution * upgradeMultiplier(this.save.upgrades.characters[character.id] ?? 0)).toFixed(2)}`,
+          `Friction ${character.friction.toFixed(2)}`,
+          `Score x${upgradeMultiplier(this.save.upgrades.characters[character.id] ?? 0).toFixed(2)} | ${describePassive(character.passive)}`,
+        ],
+      })),
+      ...itemCatalog.map((item) => ({
+        category: "items" as const,
+        id: item.id,
+        name: item.displayName,
+        count: this.save.inventory.items[item.id] ?? 0,
+        available: (this.save.inventory.items[item.id] ?? 0) > 0,
+        upgradeLevel: this.save.upgrades.items[item.id] ?? 0,
+        stats: [
+          `Masse x${item.massScale.toFixed(2)}`,
+          `Lancement x${(item.launchImpulseScale * upgradeMultiplier(this.save.upgrades.items[item.id] ?? 0)).toFixed(2)}`,
+          `Passif ${describePassive(item.passive)}`,
+          `Capacite ${item.ability ? `${item.ability.displayName} x${upgradeMultiplier(this.save.upgrades.items[item.id] ?? 0).toFixed(2)}` : "Aucune"}`,
+        ],
+      })),
+    ];
+    this.hud.renderCollection(
+      {
+        currency: this.save.currency,
+        totalXp: this.save.totalXp,
+        playerLevel: progress.level,
+        xpIntoLevel: progress.xpIntoLevel,
+        xpForNextLevel: progress.xpForNextLevel,
+        gachaCost: collectionConfig.gachaCost,
+        entries,
+        levels: levelCatalog.map((level, index) => ({
+          name: level.displayName,
+          targetScore: level.targetScore,
+          bestScore: this.save.getBestScore(level.id),
+          unlocked: index < unlockedLevelCount(levelCatalog, this.save.bestScores),
+        })),
+      },
+      message,
+    );
   }
 
   private nextLevelIsUnlocked(): boolean {
@@ -484,7 +658,7 @@ export class GameApp {
   }
 
   private refreshAbilityHud(isAiming: boolean): void {
-    const configured = this.build.item.ability;
+    const configured = this.build.ability;
     if (!configured || !this.abilityController) {
       this.hud.setAbility(null, false);
       return;
@@ -509,7 +683,7 @@ export class GameApp {
       this.hud.clearImpact();
       const character = level.shots.activeCharacter;
       if (character) {
-        this.abilityController?.beginShot(this.build.item.ability, character);
+        this.abilityController?.beginShot(this.build.ability, character);
       }
     }
   }
@@ -558,4 +732,14 @@ function cameraModeFor(state: ShotState): "aim" | "follow" | "result" {
     default:
       return "aim";
   }
+}
+
+function collectionName(category: CollectionCategory, id: string): string {
+  const catalog =
+    category === "launchers"
+      ? launcherCatalog
+      : category === "characters"
+        ? characterCatalog
+        : itemCatalog;
+  return catalog.find((entry) => entry.id === id)?.displayName ?? id;
 }

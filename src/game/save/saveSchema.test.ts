@@ -50,6 +50,24 @@ describe("migrateSave", () => {
     expect(migrateSave({ totalXp: -50 }).totalXp).toBe(0);
     expect(migrateSave({ totalXp: "beaucoup" }).totalXp).toBe(0);
   });
+
+  it("ajoute les donnees de collection a une sauvegarde ancienne", () => {
+    const migrated = migrateSave({ schemaVersion: 4, totalXp: 80 });
+    expect(migrated.currency).toBe(0);
+    expect(migrated.inventory).toEqual({ launchers: {}, characters: {}, items: {} });
+    expect(migrated.upgrades).toEqual({ launchers: {}, characters: {}, items: {} });
+  });
+
+  it("nettoie la monnaie et les niveaux de collection invalides", () => {
+    const migrated = migrateSave({
+      currency: 120.8,
+      inventory: { items: { item_stone: 2, invalid: -1 } },
+      upgrades: { items: { item_stone: 1.9, invalid: "x" } },
+    });
+    expect(migrated.currency).toBe(120);
+    expect(migrated.inventory.items).toEqual({ item_stone: 2 });
+    expect(migrated.upgrades.items).toEqual({ item_stone: 1 });
+  });
 });
 
 describe("withXp", () => {

@@ -1,4 +1,18 @@
-export const CURRENT_SCHEMA_VERSION = 4;
+export const CURRENT_SCHEMA_VERSION = 5;
+
+export type CollectionCategory = "launchers" | "characters" | "items";
+
+export interface CollectionData {
+  readonly launchers: Readonly<Record<string, number>>;
+  readonly characters: Readonly<Record<string, number>>;
+  readonly items: Readonly<Record<string, number>>;
+}
+
+export interface UpgradeData {
+  readonly launchers: Readonly<Record<string, number>>;
+  readonly characters: Readonly<Record<string, number>>;
+  readonly items: Readonly<Record<string, number>>;
+}
 
 export interface SaveData {
   readonly schemaVersion: number;
@@ -8,6 +22,17 @@ export interface SaveData {
   readonly discoveredSecretIds: readonly string[];
   /** Rangs bruts : ils sont valides contre le catalogue au chargement. */
   readonly skillRanks: Readonly<Record<string, number>>;
+  readonly currency: number;
+  readonly inventory: CollectionData;
+  readonly upgrades: UpgradeData;
+}
+
+function emptyCollection(): CollectionData {
+  return { launchers: {}, characters: {}, items: {} };
+}
+
+function emptyUpgrades(): UpgradeData {
+  return { launchers: {}, characters: {}, items: {} };
 }
 
 export function createEmptySave(): SaveData {
@@ -18,6 +43,9 @@ export function createEmptySave(): SaveData {
     completedQuestIds: [],
     discoveredSecretIds: [],
     skillRanks: {},
+    currency: 0,
+    inventory: emptyCollection(),
+    upgrades: emptyUpgrades(),
   };
 }
 
@@ -53,7 +81,51 @@ export function migrateSave(raw: unknown): SaveData {
     completedQuestIds,
     discoveredSecretIds,
     skillRanks: readRankMap(candidate.skillRanks),
+    currency: readNonNegativeInteger(candidate.currency),
+    inventory: readCollection(candidate.inventory),
+    upgrades: readUpgradeData(candidate.upgrades),
   };
+}
+
+function readCollection(value: unknown): CollectionData {
+  if (typeof value !== "object" || value === null) {
+    return emptyCollection();
+  }
+  const candidate = value as Partial<CollectionData>;
+  return {
+    launchers: readCountMap(candidate.launchers),
+    characters: readCountMap(candidate.characters),
+    items: readCountMap(candidate.items),
+  };
+}
+
+function readUpgradeData(value: unknown): UpgradeData {
+  if (typeof value !== "object" || value === null) {
+    return emptyUpgrades();
+  }
+  const candidate = value as Partial<UpgradeData>;
+  return {
+    launchers: readCountMap(candidate.launchers),
+    characters: readCountMap(candidate.characters),
+    items: readCountMap(candidate.items),
+  };
+}
+
+function readCountMap(value: unknown): Readonly<Record<string, number>> {
+  if (typeof value !== "object" || value === null) {
+    return {};
+  }
+  const cleaned: Record<string, number> = {};
+  for (const [id, count] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof count === "number" && Number.isFinite(count) && count >= 0) {
+      cleaned[id] = Math.floor(count);
+    }
+  }
+  return cleaned;
+}
+
+function readNonNegativeInteger(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0;
 }
 
 function readRankMap(value: unknown): Readonly<Record<string, number>> {
@@ -122,6 +194,39 @@ export function withSkillRanks(
   skillRanks: Readonly<Record<string, number>>,
 ): SaveData {
   return { ...save, skillRanks: { ...skillRanks } };
+}
+
+export function withCurrency(save: SaveData, amount: number): SaveData {
+  if (!Number.isFinite(amount) || amount === 0 || save.currency + amount < 0) {
+    return save;
+  }
+  return { ...save, currency: Math.floor(save.currency + amount) };
+}
+
+export function withCollectionItem(
+  save: SaveData,
+  category: CollectionCategory,
+  itemId: string,
+): SaveData {
+  const collection = { ...save.inventory[category], [itemId]: (save.inventory[category][itemId] ?? 0) + 1 };
+  return { ...save, inventory: { ...save.inventory, [category]: collection } };
+}
+
+export function withUpgradeLevel(
+  save: SaveData,
+  category: CollectionCategory,
+  itemId: string,
+  maxLevel: number,
+): SaveData {
+  const current = save.upgrades[category][itemId] ?? 0;
+  const next = Math.min(maxLevel, current + 1);
+  if (next === current) {
+    return save;
+  }
+  return {
+    ...save,
+    upgrades: { ...save.upgrades, [category]: { ...save.upgrades[category], [itemId]: next } },
+  };
 }
 
 export function isNewRecord(save: SaveData, levelId: string, score: number): boolean {
