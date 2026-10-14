@@ -46,6 +46,21 @@ Afficher la sauvegarde courante :
 window.chaosDebug.save()
 ```
 
+Afficher le build actuellement selectionne et les statistiques effectivement utilisees par le jeu :
+
+```js
+window.chaosDebug.build()
+```
+
+Le resultat contient notamment :
+
+- les identifiants du lanceur, du personnage et de l'objet actifs ;
+- les niveaux d'amelioration appliques ;
+- `resolved` : masse, rebond, friction, puissance de lancement et multiplicateur de score ;
+- `characterMass` : masse utilisee par la physique ;
+- `launchSpeedAtFullPower` et `launchImpulseAtFullPower` : valeurs utilisees par l'aperçu et le tir ;
+- `ability` : rayon, impulsion et impact réels de la bombe, ou poussée réelle du réacteur.
+
 Exemple de structure retournee :
 
 ```js
@@ -128,6 +143,16 @@ Les categories autorisees sont :
 - `items`
 
 Un premier exemplaire debloque le contenu. Les exemplaires suivants sont des doublons et augmentent le niveau d'amelioration jusqu'au plafond configure.
+
+`addItem` simule aussi cette regle : si le contenu est deja possede, chaque nouvel exemplaire ajoute augmente le niveau d'amelioration. Pour tester depuis une sauvegarde propre :
+
+```js
+await window.chaosDebug.reset()
+await window.chaosDebug.addItem("launchers", "launcher_giant_slingshot", 3)
+window.chaosDebug.save().upgrades.launchers
+```
+
+Le lanceur de depart est deja possede apres `reset()`, donc cette sequence doit afficher un niveau `3`.
 
 Les ameliorations sont appliquees au gameplay, pas seulement affichees :
 

@@ -39,6 +39,7 @@ import {
   createEmptySave,
   withCollectionItem,
   withCurrency,
+  withUpgradeLevel,
   type CollectionCategory,
   type SaveData,
 } from "../game/save/saveSchema";
@@ -420,6 +421,7 @@ export class GameApp {
 
     const persistAndRefresh = async (data: SaveData): Promise<SaveData> => {
       await this.save.replace(data);
+      this.build.applyCollectionUpgrades(this.save.upgrades);
       this.skills.load(this.save.skillRanks, this.earnedSkillPoints());
       this.applySkillBonuses();
       this.refreshCollection();
@@ -428,6 +430,21 @@ export class GameApp {
 
     installChaosDebugApi({
       save: () => this.save.snapshot,
+      build: () => ({
+        launcherId: "launcher_giant_slingshot",
+        characterId: this.build.character.id,
+        itemId: this.build.item.id,
+        upgrades: {
+          launcher: this.save.upgrades.launchers.launcher_giant_slingshot ?? 0,
+          character: this.save.upgrades.characters[this.build.character.id] ?? 0,
+          item: this.save.upgrades.items[this.build.item.id] ?? 0,
+        },
+        resolved: this.build.resolved,
+        characterMass: this.build.characterMass,
+        launchSpeedAtFullPower: this.build.launchSpeed(1),
+        launchImpulseAtFullPower: this.build.launchImpulse(1),
+        ability: this.build.ability,
+      }),
       setCurrency: (amount) =>
         persistAndRefresh({ ...this.save.snapshot, currency: Number.isFinite(amount) ? Math.max(0, Math.floor(amount)) : 0 }),
       addCurrency: (amount) => persistAndRefresh(withCurrency(this.save.snapshot, amount)),
@@ -439,7 +456,16 @@ export class GameApp {
       addItem: (category, itemId, count = 1) => {
         let updated = this.save.snapshot;
         for (let index = 0; index < Math.max(0, Math.floor(count)); index += 1) {
+          const alreadyOwned = (updated.inventory[category][itemId] ?? 0) > 0;
           updated = withCollectionItem(updated, category, itemId);
+          if (alreadyOwned) {
+            updated = withUpgradeLevel(
+              updated,
+              category,
+              itemId,
+              collectionConfig.maxDuplicateUpgradeLevel,
+            );
+          }
         }
         return persistAndRefresh(updated);
       },
