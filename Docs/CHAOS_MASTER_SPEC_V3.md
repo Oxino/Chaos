@@ -756,7 +756,7 @@ XP, premières compétences, quêtes et secrets, déblocage du niveau suivant.
 - **5b-2 [TERMINÉ]** : arbre de compétences dépensable à huit nœuds, bonus appliqués au tir, aux impacts, au rebond, aux explosions et au score, persistance en version 4.
 
 ## Phase 6 — Collection/économie
-Inventaire, monnaie unique, gacha distinct par catégorie, doublons et petites améliorations. Sauvegarde robuste.
+**[TERMINÉ]** Inventaire, monnaie unique, gacha distinct par catégorie, doublons et petites améliorations. Sauvegarde robuste.
 
 ## Phase 7 — Contenu
 Niveaux et thèmes supplémentaires, 3–4 secrets par niveau, météo/heure aléatoires, mode libre, mode triche.
