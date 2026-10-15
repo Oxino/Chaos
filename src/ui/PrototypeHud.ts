@@ -24,12 +24,15 @@ export interface PrototypeHudActions {
   readonly onPowerChanged: (ratio: number) => void;
   readonly onCycleCharacter: () => void;
   readonly onCycleItem: () => void;
+  readonly onCycleLauncher: () => void;
   readonly onActivateAbility: () => void;
   readonly onUpgradeSkill: (nodeId: string) => void;
   readonly onDrawCollection: (category: CollectionCategory) => void;
+  readonly onEquipCollection: (category: CollectionCategory, id: string) => void;
 }
 
 export interface BuildSummary {
+  readonly launcherLabel: string;
   readonly characterLabel: string;
   readonly itemLabel: string;
   readonly passivesLabel: string;
@@ -48,6 +51,7 @@ export class PrototypeHud {
   private readonly buildPanel: StackPanel;
   private readonly characterButton: Button;
   private readonly itemButton: Button;
+  private readonly launcherButton: Button;
   private readonly passivesText: TextBlock;
   private readonly abilityButton: Button;
   private readonly secretText: TextBlock;
@@ -163,6 +167,7 @@ export class PrototypeHud {
     this.collectionPanel = new CollectionPanel(
       this.texture,
       actions.onDrawCollection,
+      actions.onEquipCollection,
       () => this.collectionPanel.setVisible(false),
     );
     this.collectionButton = this.createButton("collectionButton", "Collection", "#3f8f6b", () =>
@@ -220,6 +225,10 @@ export class PrototypeHud {
     this.abilityButton.paddingBottom = "24px";
     this.abilityButton.isVisible = false;
     this.texture.addControl(this.abilityButton);
+    this.launcherButton = this.createButton("launcherButton", "Lanceur", "#9b6b3d", actions.onCycleLauncher);
+    this.launcherButton.width = "220px";
+    this.launcherButton.paddingBottom = "8px";
+    this.buildPanel.addControl(this.launcherButton);
   }
 
   /** `label` a null masque le bouton : l'objet equipe n'a pas de capacite active. */
@@ -237,6 +246,7 @@ export class PrototypeHud {
     setButtonLabel(this.characterButton, summary.characterLabel);
     setButtonLabel(this.itemButton, summary.itemLabel);
     this.passivesText.text = summary.passivesLabel;
+    setButtonLabel(this.launcherButton, summary.launcherLabel);
   }
 
   setBuildEnabled(enabled: boolean): void {

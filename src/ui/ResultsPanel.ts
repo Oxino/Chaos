@@ -18,6 +18,7 @@ export interface SessionResults {
   readonly bestScore: number;
   readonly isNewRecord: boolean;
   readonly gainedXp: number;
+  readonly gainedCurrency: number;
   readonly playerLevel: number;
   readonly skillPoints: number;
   readonly completedQuests: readonly string[];
@@ -56,14 +57,14 @@ export class ResultsPanel {
     this.title = createLine(26, "#ffd24a");
     this.stack.addControl(this.title);
 
-    for (let index = 0; index < 10; index += 1) {
+    for (let index = 0; index < 11; index += 1) {
       const line = createLine(19, "#f2f4f8");
       this.lines.push(line);
       this.stack.addControl(line);
     }
 
     // La liste des quetes peut etre longue : elle doit revenir a la ligne plutot que deborder.
-    const questLine = this.lines[9];
+    const questLine = this.lines[10];
     if (questLine) {
       questLine.textWrapping = true;
       questLine.width = "440px";
@@ -129,6 +130,11 @@ export class ResultsPanel {
     );
     this.setLine(
       9,
+      `Monnaie gagnee : ${results.gainedCurrency}`,
+      "#ffd24a",
+    );
+    this.setLine(
+      10,
       results.completedQuests.length > 0
         ? `Quetes : ${results.completedQuests.join(", ")}`
         : "Aucune nouvelle quete",

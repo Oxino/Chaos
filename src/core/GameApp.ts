@@ -151,9 +151,11 @@ export class GameApp {
       onPowerChanged: (ratio) => this.level?.aiming.setPower(ratio),
       onCycleCharacter: () => this.build.cycleCharacter(),
       onCycleItem: () => this.build.cycleItem(),
+      onCycleLauncher: () => this.build.cycleLauncher(),
       onActivateAbility: () => this.activateAbility(),
       onUpgradeSkill: (nodeId) => this.upgradeSkill(nodeId),
       onDrawCollection: (category) => this.drawCollection(category),
+      onEquipCollection: (category, id) => this.equipCollection(category, id),
     });
 
     window.addEventListener("resize", this.handleResize);
@@ -174,6 +176,7 @@ export class GameApp {
     this.quests.setKnownCompleted(this.save.completedQuestIds);
     this.skills.load(this.save.skillRanks, this.earnedSkillPoints());
     this.build.applyCollectionUpgrades(this.save.upgrades);
+    this.build.applyCollectionOwnership(this.save.inventory);
     this.refreshCollection();
     this.installDebugTools();
     this.loadLevel(0);
@@ -371,6 +374,7 @@ export class GameApp {
           bestScore: this.save.getBestScore(level.blockout.id),
           isNewRecord,
           gainedXp,
+          gainedCurrency,
           playerLevel: progress.level,
           skillPoints: totalSkillPoints(progress.level, progressionConfig),
           completedQuests: completedQuests.map((quest) => quest.name),
@@ -386,6 +390,7 @@ export class GameApp {
       return;
     }
     void this.save.saveCollection(reward.save);
+    this.build.applyCollectionOwnership(reward.save.inventory);
     this.build.applyCollectionUpgrades(reward.save.upgrades);
     this.refreshCollection(
       `${reward.duplicate ? "Doublon" : "Nouveau contenu"} : ${collectionName(category, reward.itemId)}`,
@@ -394,24 +399,18 @@ export class GameApp {
 
   private async ensureStarterCollection(): Promise<void> {
     let save = this.save.snapshot;
-    for (const id of launcherCatalog.map((entry) => entry.id)) {
-      if (!save.inventory.launchers[id]) {
-        save = withCollectionItem(save, "launchers", id);
-      }
-    }
-    for (const id of characterCatalog.map((entry) => entry.id)) {
-      if (!save.inventory.characters[id]) {
-        save = withCollectionItem(save, "characters", id);
-      }
-    }
-    for (const id of itemCatalog.map((entry) => entry.id)) {
-      if (!save.inventory.items[id]) {
-        save = withCollectionItem(save, "items", id);
-      }
+    const starterContent = [
+      ["launchers", "launcher_giant_slingshot"],
+      ["characters", "character_dummy"],
+      ["items", "item_stone"],
+    ] as const;
+    for (const [category, id] of starterContent) {
+      if (!save.inventory[category][id]) save = withCollectionItem(save, category, id);
     }
     if (save !== this.save.snapshot) {
       await this.save.saveCollection(save);
     }
+    this.build.applyCollectionOwnership(this.save.inventory);
   }
 
   private installDebugTools(): void {
@@ -421,6 +420,7 @@ export class GameApp {
 
     const persistAndRefresh = async (data: SaveData): Promise<SaveData> => {
       await this.save.replace(data);
+      this.build.applyCollectionOwnership(this.save.inventory);
       this.build.applyCollectionUpgrades(this.save.upgrades);
       this.skills.load(this.save.skillRanks, this.earnedSkillPoints());
       this.applySkillBonuses();
@@ -431,7 +431,7 @@ export class GameApp {
     installChaosDebugApi({
       save: () => this.save.snapshot,
       build: () => ({
-        launcherId: "launcher_giant_slingshot",
+        launcherId: this.build.launcher.id,
         characterId: this.build.character.id,
         itemId: this.build.item.id,
         upgrades: {
@@ -477,6 +477,7 @@ export class GameApp {
       reset: async () => {
         await this.save.replace(createEmptySave());
         await this.ensureStarterCollection();
+        this.build.applyCollectionOwnership(this.save.inventory);
         this.skills.load(this.save.skillRanks, this.earnedSkillPoints());
         this.applySkillBonuses();
         this.refreshCollection();
@@ -496,9 +497,9 @@ export class GameApp {
         available: (this.save.inventory.launchers[launcher.id] ?? 0) > 0,
         upgradeLevel: this.save.upgrades.launchers[launcher.id] ?? 0,
         stats: [
-          `Impulsion ${Math.round(launcherConfig.maxLaunchImpulse * upgradeMultiplier(this.save.upgrades.launchers[launcher.id] ?? 0))} N.s`,
+          `Impulsion ${Math.round(launcherConfig.maxLaunchImpulse * launcher.launchImpulseScale * upgradeMultiplier(this.save.upgrades.launchers[launcher.id] ?? 0))} N.s`,
           `Bonus lancement +${Math.round((upgradeMultiplier(this.save.upgrades.launchers[launcher.id] ?? 0) - 1) * 100)} %`,
-          `Plafond vitesse ${launcherConfig.maxLaunchSpeed} m/s`,
+          `Plafond vitesse ${launcher.maxLaunchSpeed} m/s`,
           `Amplitude ${launcherConfig.horizontalAmplitudeDeg}° / ${launcherConfig.verticalAmplitudeDeg}°`,
         ],
       })),
@@ -549,6 +550,16 @@ export class GameApp {
       },
       message,
     );
+  }
+
+  private equipCollection(category: CollectionCategory, id: string): void {
+    if (this.level?.shots.currentState !== "Aiming") {
+      this.refreshCollection("Equipement disponible uniquement pendant la visee");
+      return;
+    }
+    if (this.build.equip(category, id)) {
+      this.refreshCollection(`${collectionName(category, id)} equipe`);
+    }
   }
 
   private nextLevelIsUnlocked(): boolean {
@@ -627,6 +638,7 @@ export class GameApp {
     this.hud.setPowerEnabled(isAiming && !level.shots.isSessionComplete);
     this.hud.setBuildEnabled(isAiming && !level.shots.isSessionComplete);
     this.hud.setBuild({
+      launcherLabel: this.build.launcher.displayName,
       characterLabel: this.build.character.displayName,
       itemLabel: this.build.item.displayName,
       passivesLabel: `${describePassive(this.build.character.passive)} / ${describePassive(this.build.item.passive)}`,

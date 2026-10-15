@@ -33,4 +33,22 @@ describe("GachaService", () => {
     expect(reward?.upgradeLevel).toBe(collectionConfig.maxDuplicateUpgradeLevel);
     expect(reward?.save.upgrades.items.item_stone).toBe(collectionConfig.maxDuplicateUpgradeLevel);
   });
+
+  it("rembourse la moitie du tirage au niveau maximal", () => {
+    const save = {
+      ...withCurrency(createEmptySave(), collectionConfig.gachaCost),
+      inventory: { launchers: {}, characters: {}, items: { item_stone: 1 } },
+      upgrades: {
+        launchers: {},
+        characters: {},
+        items: { item_stone: collectionConfig.maxDuplicateUpgradeLevel },
+      },
+    };
+    const reward = new GachaService(() => 0).draw(save, "items");
+
+    expect(reward?.upgradeLevel).toBe(collectionConfig.maxDuplicateUpgradeLevel);
+    expect(reward?.currencyRemaining).toBe(
+      collectionConfig.gachaCost * collectionConfig.maxDuplicateRefundRatio,
+    );
+  });
 });

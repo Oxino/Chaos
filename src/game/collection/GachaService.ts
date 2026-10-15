@@ -37,14 +37,21 @@ export class GachaService {
     }
 
     const duplicate = (save.inventory[category][itemId] ?? 0) > 0;
+    const currentUpgrade = save.upgrades[category][itemId] ?? 0;
+    const maxed = currentUpgrade >= collectionConfig.maxDuplicateUpgradeLevel;
     let updated = withCurrency(save, -collectionConfig.gachaCost);
     updated = withCollectionItem(updated, category, itemId);
-    if (duplicate) {
+    if (duplicate && !maxed) {
       updated = withUpgradeLevel(
         updated,
         category,
         itemId,
         collectionConfig.maxDuplicateUpgradeLevel,
+      );
+    } else if (duplicate && maxed) {
+      updated = withCurrency(
+        updated,
+        Math.floor(collectionConfig.gachaCost * collectionConfig.maxDuplicateRefundRatio),
       );
     }
 

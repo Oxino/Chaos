@@ -47,6 +47,7 @@ export class CollectionPanel {
   constructor(
     texture: AdvancedDynamicTexture,
     private readonly onDraw: (category: CollectionCategory) => void,
+    private readonly onEquip: (category: CollectionCategory, id: string) => void,
     onClose: () => void,
   ) {
     this.panel = new Rectangle("collectionPanel");
@@ -179,15 +180,32 @@ export class CollectionPanel {
     for (const entry of entries) {
       const ownership = entry.available ? `${entry.count} exemplaire(s)` : "Indisponible";
       const upgrade = entry.upgradeLevel > 0 ? ` | amelioration ${entry.upgradeLevel}` : "";
-      this.list.addControl(
-        createText(
-          `collectionEntry_${entry.category}_${entry.id}`,
-          `${entry.name} - ${ownership}${upgrade}\n${entry.stats.join(" | ")}`,
-          15,
-          entry.available ? "#f2f4f8" : "#69758a",
-          "64px",
-        ),
+      const row = new StackPanel(`collectionEntry_${entry.category}_${entry.id}`);
+      row.height = "82px";
+      const details = createText(
+        `collectionDetails_${entry.category}_${entry.id}`,
+        `${entry.name} - ${ownership}${upgrade}\n${entry.stats.join(" | ")}`,
+        15,
+        entry.available ? "#f2f4f8" : "#69758a",
+        "56px",
       );
+      row.addControl(details);
+      if (entry.available) {
+        const equip = Button.CreateSimpleButton(
+          `equip_${entry.category}_${entry.id}`,
+          "Equiper",
+        );
+        equip.width = "140px";
+        equip.height = "26px";
+        equip.color = "#ffffff";
+        equip.background = "#3f8f6b";
+        equip.cornerRadius = 6;
+        equip.thickness = 0;
+        equip.fontSize = 14;
+        equip.onPointerClickObservable.add(() => this.onEquip(entry.category, entry.id));
+        row.addControl(equip);
+      }
+      this.list.addControl(row);
     }
     if (entries.length === 0) {
       this.list.addControl(createText("collectionEmpty", "Aucun contenu dans cette categorie", 17, "#9aa7bd", "32px"));

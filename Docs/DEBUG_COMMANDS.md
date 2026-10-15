@@ -167,6 +167,8 @@ Lanceurs :
 
 ```text
 launcher_giant_slingshot
+launcher_heavy_cannon
+launcher_spring_pistol
 ```
 
 Personnages :
