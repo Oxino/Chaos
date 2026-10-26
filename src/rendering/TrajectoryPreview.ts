@@ -11,9 +11,16 @@ import {
 import { aimConfig } from "../data/config/gameplayConfig";
 import type { Vector3Like } from "../data/content/levels/levelTypes";
 import type { ClippedTrajectory } from "../game/aiming/clipTrajectoryToScene";
+import type { AimTargetInfo } from "../game/destruction/DestructionService";
 
 const LINE_COLOR = "#ffd24a";
 const RETICLE_COLOR = "#ff4d4d";
+const TARGET_COLORS: Record<AimTargetInfo["state"], string> = {
+  Intact: "#4dff88",
+  Damaged: "#ffc247",
+  Critical: "#ff7b32",
+  Destroyed: "#b0b0b0",
+};
 /** Decolle le reticule de la surface touchee pour eviter le z-fighting. */
 const RETICLE_SURFACE_OFFSET = 0.1;
 
@@ -23,6 +30,7 @@ const RETICLE_SURFACE_OFFSET = 0.1;
 export class TrajectoryPreview {
   private lines: LinesMesh;
   private readonly reticle: Mesh;
+  private readonly reticleMaterial: StandardMaterial;
 
   constructor(private readonly scene: Scene) {
     const placeholder = Array.from(
@@ -37,18 +45,24 @@ export class TrajectoryPreview {
     this.lines.color = Color3.FromHexString(LINE_COLOR);
     this.lines.isPickable = false;
 
-    const reticleMaterial = new StandardMaterial("reticleMaterial", scene);
-    reticleMaterial.emissiveColor = Color3.FromHexString(RETICLE_COLOR);
-    reticleMaterial.diffuseColor = Color3.Black();
-    reticleMaterial.specularColor = Color3.Black();
+    this.reticleMaterial = new StandardMaterial("reticleMaterial", scene);
+    this.reticleMaterial.emissiveColor = Color3.FromHexString(RETICLE_COLOR);
+    this.reticleMaterial.diffuseColor = Color3.Black();
+    this.reticleMaterial.specularColor = Color3.Black();
 
     this.reticle = MeshBuilder.CreateTorus(
       "reticle",
       { diameter: aimConfig.reticleDiameter, thickness: 0.45, tessellation: 32 },
       scene,
     );
-    this.reticle.material = reticleMaterial;
+    this.reticle.material = this.reticleMaterial;
     this.reticle.isPickable = false;
+  }
+
+  setTarget(target: AimTargetInfo | null): void {
+    this.reticleMaterial.emissiveColor = Color3.FromHexString(
+      target ? TARGET_COLORS[target.state] : RETICLE_COLOR,
+    );
   }
 
   update(trajectory: ClippedTrajectory): void {

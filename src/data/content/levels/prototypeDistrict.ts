@@ -17,6 +17,8 @@ export const prototypeDistrict: LevelBlockout = {
   targetScore: 15000,
   groundSize: 180,
   groundColor: "#3c4557",
+  weatherOptions: ["sunny", "cloudy"],
+  timeOfDayOptions: ["day", "dusk"],
   launcher: {
     position: { x: 0, y: 4, z: -46 },
     restDirection: { x: 0, y: 0.42, z: 1 },

@@ -129,6 +129,13 @@ Aucun pilotage directionnel libre du personnage en vol.
 ## 5.2 Aperçu de trajectoire et réticule [VALIDÉ]
 Afficher une prévisualisation de trajectoire et un **réticule de cible** au point d'impact prévu. Le réticule est plaqué sur la première surface rencontrée (sol, mur, véhicule) et orienté selon sa normale, afin de rester lisible.
 
+**État des dégâts pendant la visée [VALIDÉ] :** lorsque le point d'impact vise un élément
+destructible, le HUD affiche son nom, son état courant et sa progression d'étapes perdues
+(par exemple `Voiture - detruite (1/1 degats)`). Le réticule reprend une couleur correspondant
+à l'état (`Intact`, `Damaged`, `Critical` ou `Destroyed`). Cet aperçu lit l'état persistant du
+bloc et se met à jour immédiatement quand la visée change ; il disparaît lorsque la cible n'est
+plus un destructible ou lorsque le tir commence.
+
 La prévisualisation doit changer selon :
 - angle et puissance ;
 - propriétés du lanceur ;
@@ -247,6 +254,28 @@ Empêcher le double score sur un objet détruit, les callbacks multiples et les 
 - Garder les débris importants pour le gameplay ; simplifier/supprimer les petits débris décoratifs selon une politique contrôlée.
 - Préserver l'impression de destruction avec VFX, poussière et fragments simplifiés plutôt qu'avec des centaines de corps simulés.
 - Les règles de nettoyage ne doivent pas supprimer un personnage lancé avant la fin de la partie.
+
+## 6.7 Limites de carte et bucket Back Rooms [VALIDÉ]
+Chaque niveau possède six limites invisibles autour de la zone jouable : côtés ouest/est,
+faces nord/sud, plafond et limite basse. Ces limites sont des volumes surveillés et non des murs
+bloquants : le personnage doit pouvoir les franchir pour que le système de sécurité puisse
+déclencher la récupération. La limite basse est également surveillée afin de permettre une chute
+contrôlée vers la zone de réception.
+
+Si une partie quelconque d'un personnage franchit une limite, le pantin entier est arrêté puis
+transféré dans un bucket situé sous la carte. Le personnage reste vivant, visible et conservé
+comme obstacle jusqu'à la fin de la partie. Le transfert s'applique aussi aux personnages des
+tirs précédents si une collision ultérieure les projette hors des limites.
+
+La zone surveillée est volontairement alignée sur la zone construite du blockout, et non sur toute
+la dalle technique de sol, afin qu'un personnage qui sort du quartier soit récupéré rapidement.
+Le bucket est un easter egg décoré comme une grande pièce Back Rooms : murs et moquette jaunes,
+panneaux répétitifs, bureaux simples, néons fluorescents et espace clos. La caméra est replacée
+à l'intérieur de cette pièce avec le personnage. Le bucket sert également de garde-fou pour empêcher une chute
+infinie ou une caméra qui suivrait un personnage hors de la scène. Les dimensions et les hauteurs
+restent centralisées dans la configuration de gameplay.
+Le message de récupération reste affiché pendant la transition afin que le joueur puisse
+identifier clairement le transfert.
 
 # 7. NIVEAUX, THÈMES, SECRETS ET MÉTÉO
 
@@ -452,6 +481,10 @@ Taux de rareté, probabilités, garanties, fragments, coût d'un tirage, plafond
 - message humoristique, par exemple : « Bravo, vous êtes le plus fort. Vous avez gagné. »
 
 Ce mode est un outil de fun/test, pas un élément d'équilibrage normal.
+**Utilisation [VALIDÉE] :** pendant la visée, activer `Triche : activee`, lancer un personnage,
+puis cliquer sur `Bombe atomique (apres lancer)` pendant le vol ou la stabilisation. Le raccourci
+`B` déclenche la même action sur PC. Le bouton reste désactivé avant le lancement, car l'explosion
+est centrée sur la position du personnage.
 **[PROPOSITION]** Marquer le score comme non officiel ou désactiver les succès quand le mode est actif. Ce garde-fou n'a pas encore été confirmé.
 
 **Note d'implémentation** : le souffle de zone de la bombe (§5.4) est générique et paramétrable. La bombe atomique pourra le réutiliser avec un rayon et une intensité bien plus grands, sans nouveau système.
@@ -760,6 +793,13 @@ XP, premières compétences, quêtes et secrets, déblocage du niveau suivant.
 
 ## Phase 7 — Contenu
 Niveaux et thèmes supplémentaires, 3–4 secrets par niveau, météo/heure aléatoires, mode libre, mode triche.
+7A — Contenu de niveaux : ajouter des niveaux/thèmes supplémentaires avec 3 à 4 secrets chacun.
+7B — Variations d’ambiance : météo et heure de début de partie, configurables et visuelles.
+7C — Modes de jeu : mode libre réellement sélectionnable, sans impact sur la campagne.
+7D — Mode triche : option désactivée par défaut, bombe cartoon réutilisant le souffle existant.
+7E — Validation : tests unitaires, typecheck, build et smoke test navigateur.
+
+**État actuel :** 7A à 7D implémentées : quatre niveaux data-driven avec 3 à 4 secrets chacun, sélection aléatoire météo/heure avec variation visuelle, mode libre accessible depuis la carte sans récompense ni progression officielle, et mode triche désactivé par défaut avec bombe atomique cartoon. Les secrets sont maintenant des zones invisibles révélées uniquement au passage du personnage. La pluie et le brouillard disposent d’effets visuels dédiés ; les modificateurs météo de gameplay restent volontairement hors périmètre.
 
 ## Phase 8 — Polish
 Animations, VFX, audio, tutoriel, accessibilité, optimisation mobile, tests de régression et préparation de sortie.
@@ -780,6 +820,7 @@ Les idées futures (éditeur, replays, classements, défis hebdomadaires, boss g
 ## 20.2 Persistance
 - Tir 1 détruit une voiture et endommage un bâtiment.
 - Tir 2 retrouve la voiture détruite et le bâtiment endommagé.
+- Pendant la visée du tir 2, le bloc ciblé expose son état de dégâts et le nombre d'étapes déjà perdues.
 - Le personnage du tir 1 reste dans le monde.
 - Nouvelle partie : scène complètement réinitialisée.
 
@@ -789,6 +830,12 @@ Les idées futures (éditeur, replays, classements, défis hebdomadaires, boss g
 - Impact qualifiant : voiture détruite.
 - Score de destruction attribué une seule fois.
 - Pas de boucle infinie de dégâts, explosions ou score.
+
+## 20.4 Limites et sécurité de scène
+- Les six limites invisibles sont présentes sur chaque niveau.
+- Un personnage qui franchit un côté, le plafond ou la limite basse est récupéré dans le bucket.
+- Le pantin entier est déplacé et ses vitesses sont remises à zéro.
+- Les personnages récupérés restent visibles dans le décor Back Rooms jusqu'au reset de partie.
 
 ## 20.4 Score/progression
 - Score cumulé sur tous les tirs.

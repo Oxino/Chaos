@@ -61,6 +61,26 @@ export const destructionConfig = {
   maxActiveDebris: 24,
 } as const;
 
+export const boundaryConfig = {
+  /** Marge autour de la zone construite avant le volume de récupération. */
+  horizontalMargin: -20,
+  /** Limites verticales de la zone jouable. */
+  lowerY: -10,
+  upperY: 72,
+  /** Dimensions de la salle Back Rooms sous la carte. */
+  bucketCenterY: -16,
+  bucketWidth: 60,
+  bucketDepth: 60,
+  bucketHeight: 24,
+  bucketWallThickness: 0.35,
+} as const;
+
+export const cheatConfig = {
+  atomicRadius: 90,
+  atomicImpulse: 9000,
+  atomicImpactStrength: 5000,
+} as const;
+
 export const cameraConfig = {
   followDistance: 22,
   followHeight: 9,

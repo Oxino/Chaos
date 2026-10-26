@@ -63,6 +63,15 @@ export class CameraDirector {
     return this.mode;
   }
 
+  focusImmediately(position: Vector3): void {
+    this.followCamera.setTarget(position);
+    this.followCamera.setPosition(
+      position.add(new Vector3(0, cameraConfig.followHeight, -cameraConfig.followDistance)),
+    );
+    this.followCamera.radius = cameraConfig.followDistance;
+    this.scene.activeCamera = this.followCamera;
+  }
+
   setMode(mode: CameraMode): void {
     if (mode === this.mode) {
       return;

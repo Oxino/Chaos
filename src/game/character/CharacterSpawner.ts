@@ -5,6 +5,7 @@ import {
   PhysicsAggregate,
   Physics6DoFConstraint,
   PhysicsConstraintAxis,
+  PhysicsMotionType,
   PhysicsShapeType,
   type Scene,
   StandardMaterial,
@@ -13,7 +14,9 @@ import {
 import type {
   RagdollDefinition,
   RagdollPartDefinition,
-} from "../../data/content/characters/characterTypes";import type { Vector3Like } from "../../data/content/levels/levelTypes";
+} from "../../data/content/characters/characterTypes";
+import type { Vector3Like } from "../../data/content/levels/levelTypes";
+import { isOutsideMap, type MapBounds } from "../level/boundaryMath";
 
 const DEG_TO_RAD = Math.PI / 180;
 
@@ -44,6 +47,7 @@ export interface SpawnProfile {
 export class CharacterSpawner {
   private readonly materials = new Map<string, StandardMaterial>();
   private readonly launched: LaunchedCharacter[] = [];
+  private readonly rescued = new Set<LaunchedCharacter>();
   private spawnCount = 0;
 
   constructor(private readonly scene: Scene) {}
@@ -107,6 +111,50 @@ export class CharacterSpawner {
       }
     }
     this.launched.length = 0;
+    this.rescued.clear();
+  }
+
+  rescueIfOutside(
+    character: LaunchedCharacter,
+    bounds: MapBounds,
+    bucketCenter: Vector3Like,
+  ): boolean {
+    if (this.rescued.has(character)) {
+      return false;
+    }
+
+    const outside =
+      isOutsideMap(character.root.mesh.getAbsolutePosition(), bounds) ||
+      character.parts.some((part) => isOutsideMap(part.mesh.getAbsolutePosition(), bounds));
+    if (!outside) {
+      return false;
+    }
+
+    const rootPosition = character.root.mesh.getAbsolutePosition();
+    const destination = new Vector3(bucketCenter.x, bucketCenter.y, bucketCenter.z);
+    for (const part of character.parts) {
+      const offset = part.mesh.getAbsolutePosition().subtract(rootPosition);
+      offset.scaleInPlace(Math.min(1, 2 / Math.max(offset.length(), 2)));
+      const body = part.aggregate.body;
+      body.setMotionType(PhysicsMotionType.STATIC);
+      body.disablePreStep = false;
+      part.mesh.position.copyFrom(destination.add(offset));
+      body.setLinearVelocity(Vector3.Zero());
+      body.setAngularVelocity(Vector3.Zero());
+      body.disableSync = false;
+    }
+    this.rescued.add(character);
+    return true;
+  }
+
+  rescueOutOfBounds(bounds: MapBounds, bucketCenter: Vector3Like): number {
+    let rescuedCount = 0;
+    for (const character of this.launched) {
+      if (this.rescueIfOutside(character, bounds, bucketCenter)) {
+        rescuedCount += 1;
+      }
+    }
+    return rescuedCount;
   }
 
   private createPart(

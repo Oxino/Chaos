@@ -7,6 +7,9 @@ export interface Vector3Like {
   readonly z: number;
 }
 
+export type WeatherType = "sunny" | "cloudy" | "rain" | "fog";
+export type TimeOfDay = "dawn" | "day" | "dusk" | "night";
+
 /** Position d'ancrage fixe du lanceur dans le niveau (spec 5.3, 10.2). */
 export interface LauncherAnchor {
   readonly position: Vector3Like;
@@ -34,6 +37,8 @@ export interface LevelBlockout {
   readonly targetScore: number;
   readonly groundSize: number;
   readonly groundColor: string;
+  readonly weatherOptions: readonly WeatherType[];
+  readonly timeOfDayOptions: readonly TimeOfDay[];
   readonly launcher: LauncherAnchor;
   readonly boxes: readonly BlockoutBox[];
   readonly buildings: readonly BuildingPlacement[];

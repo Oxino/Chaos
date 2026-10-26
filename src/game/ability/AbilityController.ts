@@ -3,6 +3,7 @@ import type { ActiveAbility } from "../../data/content/items/abilityTypes";
 import type { LaunchedCharacter } from "../character/CharacterSpawner";
 import type { DestructionService } from "../destruction/DestructionService";
 import type { AbilityEffects } from "../../rendering/effects/AbilityEffects";
+import { cheatConfig } from "../../data/config/gameplayConfig";
 
 /** Etats d'une capacite active (spec 5.4). */
 export type AbilityState = "Unavailable" | "Ready" | "Active" | "Used";
@@ -73,6 +74,19 @@ export class AbilityController {
 
     this.remainingMs = this.ability.durationMs;
     this.state = "Active";
+    return true;
+  }
+
+  activateCheat(): boolean {
+    if (!this.character || this.state === "Used" || this.state === "Active") {
+      return false;
+    }
+    this.detonate(
+      cheatConfig.atomicRadius,
+      cheatConfig.atomicImpulse,
+      cheatConfig.atomicImpactStrength,
+    );
+    this.state = "Used";
     return true;
   }
 

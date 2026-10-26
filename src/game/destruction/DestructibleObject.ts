@@ -64,6 +64,14 @@ export class DestructibleObject {
     return stateForStage(this.stage, this.definition.stages);
   }
 
+  get currentStage(): number {
+    return this.stage;
+  }
+
+  get renderMesh(): Mesh {
+    return this.mesh;
+  }
+
   get isDestroyed(): boolean {
     return this.stage <= 0;
   }

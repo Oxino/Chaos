@@ -9,6 +9,7 @@ import {
 } from "../character/CharacterSpawner";
 import { computeLaunchImpulse } from "./launchMath";
 import { isShotFinished, isStill, nextStillnessMs } from "./settling";
+import type { MapBounds } from "../level/boundaryMath";
 
 /** Etats du tir (spec 15.4). `BuildSelection` arrivera avec la Phase 4. */
 export type ShotState = "Aiming" | "InFlight" | "Settling" | "ShotComplete";
@@ -50,6 +51,10 @@ export class ShotController {
 
   get activeCharacter(): LaunchedCharacter | null {
     return this.character;
+  }
+
+  rescueCharactersOutside(bounds: MapBounds, bucketCenter: Vector3Like): number {
+    return this.spawner.rescueOutOfBounds(bounds, bucketCenter);
   }
 
   get canLaunch(): boolean {

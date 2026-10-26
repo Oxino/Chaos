@@ -25,6 +25,7 @@ export interface SessionResults {
   readonly secretsFound: number;
   readonly secretsTotal: number;
   readonly hasNextLevel: boolean;
+  readonly official: boolean;
 }
 
 /**
@@ -57,14 +58,14 @@ export class ResultsPanel {
     this.title = createLine(26, "#ffd24a");
     this.stack.addControl(this.title);
 
-    for (let index = 0; index < 11; index += 1) {
+    for (let index = 0; index < 12; index += 1) {
       const line = createLine(19, "#f2f4f8");
       this.lines.push(line);
       this.stack.addControl(line);
     }
 
     // La liste des quetes peut etre longue : elle doit revenir a la ligne plutot que deborder.
-    const questLine = this.lines[10];
+    const questLine = this.lines[11];
     if (questLine) {
       questLine.textWrapping = true;
       questLine.width = "440px";
@@ -107,34 +108,40 @@ export class ResultsPanel {
     this.title.color = objectiveReached ? "#5fd38d" : "#ff6b4a";
 
     this.setLine(0, results.levelName, "#9aa7bd");
-    this.setLine(1, `Score total : ${results.total} / ${results.targetScore}`, "#f2f4f8");
-    this.setLine(2, `Degats directs : ${results.direct}`, "#f2f4f8");
-    this.setLine(3, `Bonus de combos : ${results.combo}`, "#f2f4f8");
-    this.setLine(4, `Meilleure chaine : ${results.bestChain} destructions`, "#f2f4f8");
+    this.setLine(1, results.official ? "Partie officielle" : "Partie non officielle", results.official ? "#5fd38d" : "#ffb13c");
+    this.setLine(2, `Score total : ${results.total} / ${results.targetScore}`, "#f2f4f8");
+    this.setLine(3, `Degats directs : ${results.direct}`, "#f2f4f8");
+    this.setLine(4, `Bonus de combos : ${results.combo}`, "#f2f4f8");
     this.setLine(
       5,
+      `Meilleure chaine : ${results.bestChain} destructions`,
+      "#f2f4f8",
+    );
+    this.setLine(
+      6,
       `Objets detruits : ${results.destroyedCount} - secrets ${results.secretsFound}/${results.secretsTotal}`,
       "#f2f4f8",
-    );    this.setLine(
-      6,
+    );
+    this.setLine(
+      7,
       results.isNewRecord
         ? `Nouveau record : ${results.bestScore}`
         : `Meilleur score : ${results.bestScore}`,
       results.isNewRecord ? "#ffd24a" : "#9aa7bd",
     );
-    this.setLine(7, `XP gagnee : ${results.gainedXp}`, "#5fd38d");
+    this.setLine(8, `XP gagnee : ${results.gainedXp}`, "#5fd38d");
     this.setLine(
-      8,
+      9,
       `Niveau ${results.playerLevel} - ${results.skillPoints} point(s) de competence`,
       "#5fd38d",
     );
     this.setLine(
-      9,
+      10,
       `Monnaie gagnee : ${results.gainedCurrency}`,
       "#ffd24a",
     );
     this.setLine(
-      10,
+      11,
       results.completedQuests.length > 0
         ? `Quetes : ${results.completedQuests.join(", ")}`
         : "Aucune nouvelle quete",

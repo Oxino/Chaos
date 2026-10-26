@@ -10,6 +10,8 @@ function level(id: string, targetScore: number): LevelBlockout {
     targetScore,
     groundSize: 100,
     groundColor: "#000000",
+    weatherOptions: ["sunny"],
+    timeOfDayOptions: ["day"],
     launcher: { position: { x: 0, y: 0, z: 0 }, restDirection: { x: 0, y: 0, z: 1 } },
     boxes: [],
     buildings: [],

@@ -1,10 +1,12 @@
-import { Ray, type Scene, Vector3 } from "@babylonjs/core";
+import { Ray, type AbstractMesh, type Scene, Vector3 } from "@babylonjs/core";
 import type { Vector3Like } from "../../data/content/levels/levelTypes";
 import type { TrajectoryResult } from "../shot/trajectory";
 
 export interface ClippedTrajectory extends TrajectoryResult {
   /** Normale de la surface touchee, ou null si la trajectoire n'a rencontre aucun obstacle. */
   readonly impactNormal: Vector3Like | null;
+  /** Mesh de la premiere surface touchee, utilise pour afficher son etat de degats. */
+  readonly impactMesh: AbstractMesh | null;
 }
 
 /**
@@ -53,12 +55,13 @@ export function clipTrajectoryToScene(
       points: clipped,
       impact,
       impactNormal: normal ? { x: normal.x, y: normal.y, z: normal.z } : null,
+      impactMesh: hit.pickedMesh,
       range: Math.hypot(impact.x - start.x, impact.z - start.z),
       flightTime: (trajectory.flightTime * index) / (points.length - 1),
     };
   }
 
-  return { ...trajectory, impactNormal: { x: 0, y: 1, z: 0 } };
+  return { ...trajectory, impactNormal: { x: 0, y: 1, z: 0 }, impactMesh: null };
 }
 
 function toVector3(point: Vector3Like): Vector3 {

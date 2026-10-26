@@ -1,4 +1,11 @@
-import { Color3, type PhysicsBody, type Scene, StandardMaterial, Vector3 } from "@babylonjs/core";
+import {
+  Color3,
+  type AbstractMesh,
+  type PhysicsBody,
+  type Scene,
+  StandardMaterial,
+  Vector3,
+} from "@babylonjs/core";
 import type { DestructibleState } from "../../data/content/destructibles/destructibleTypes";
 import { explosionFalloff } from "../ability/explosionMath";
 import type { DebrisBudget } from "./DebrisBudget";
@@ -17,6 +24,14 @@ export interface ImpactReport {
   readonly destroyed: boolean;
 }
 
+export interface AimTargetInfo {
+  readonly id: string;
+  readonly displayName: string;
+  readonly state: DestructibleState;
+  readonly remainingStages: number;
+  readonly totalStages: number;
+}
+
 export type ImpactListener = (report: ImpactReport) => void;
 
 /** En dessous de cette intensite, le choc est trop anodin pour meriter un affichage. */
@@ -30,6 +45,7 @@ const REPORTABLE_INTENSITY = 20;
 export class DestructionService {
   private readonly objects = new Map<string, DestructibleObject>();
   private readonly bodies = new Map<PhysicsBody, DestructibleObject>();
+  private readonly meshes = new Map<AbstractMesh, DestructibleObject>();
   private readonly buildings: DestructibleBuilding[] = [];
   private readonly destroyedIds = new Set<string>();
   private collapsedBuildingCount = 0;
@@ -69,6 +85,7 @@ export class DestructionService {
   register(destructible: DestructibleObject, body: PhysicsBody): void {
     this.objects.set(destructible.id, destructible);
     this.bodies.set(body, destructible);
+    this.meshes.set(destructible.renderMesh, destructible);
 
     body.setCollisionCallbackEnabled(true);
     body.getCollisionObservable().add((event) => {
@@ -90,6 +107,23 @@ export class DestructionService {
 
   onImpact(listener: ImpactListener): void {
     this.impactListeners.add(listener);
+  }
+
+  getAimTarget(mesh: AbstractMesh | null): AimTargetInfo | null {
+    if (!mesh) {
+      return null;
+    }
+    const destructible = this.meshes.get(mesh);
+    if (!destructible) {
+      return null;
+    }
+    return {
+      id: destructible.id,
+      displayName: destructible.definition.displayName,
+      state: destructible.state,
+      remainingStages: Math.max(0, destructible.currentStage),
+      totalStages: destructible.definition.stages,
+    };
   }
 
   beginShot(): void {

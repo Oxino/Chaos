@@ -8,6 +8,7 @@ import {
 import type { CollectionCategory } from "../game/save/saveSchema";
 
 export interface CollectionLevelView {
+  readonly index: number;
   readonly name: string;
   readonly targetScore: number;
   readonly bestScore: number;
@@ -48,6 +49,7 @@ export class CollectionPanel {
     texture: AdvancedDynamicTexture,
     private readonly onDraw: (category: CollectionCategory) => void,
     private readonly onEquip: (category: CollectionCategory, id: string) => void,
+    private readonly onSelectLevel: (index: number) => void,
     onClose: () => void,
   ) {
     this.panel = new Rectangle("collectionPanel");
@@ -163,14 +165,29 @@ export class CollectionPanel {
     this.list.clearControls();
     if (this.selectedCategory === "levels") {
       for (const level of profile.levels) {
+        const row = new StackPanel(`collectionLevel_${level.index}`);
+        row.height = "76px";
+        row.addControl(createText(
+          `collectionLevelDetails_${level.index}`,
+          `${level.unlocked ? "Disponible" : "Verrouille"} - ${level.name}\nObjectif ${level.targetScore} | Meilleur ${level.bestScore}`,
+          16,
+          level.unlocked ? "#f2f4f8" : "#69758a",
+          "52px",
+        ));
+        if (level.unlocked) {
+          const freeButton = Button.CreateSimpleButton(`freeLevel_${level.index}`, "Mode libre");
+          freeButton.width = "150px";
+          freeButton.height = "28px";
+          freeButton.color = "#ffffff";
+          freeButton.background = "#3f8f6b";
+          freeButton.cornerRadius = 6;
+          freeButton.thickness = 0;
+          freeButton.fontSize = 14;
+          freeButton.onPointerClickObservable.add(() => this.onSelectLevel(level.index));
+          row.addControl(freeButton);
+        }
         this.list.addControl(
-          createText(
-            `collectionLevel_${level.name}`,
-            `${level.unlocked ? "Disponible" : "Verrouille"} - ${level.name}\nObjectif ${level.targetScore} | Meilleur ${level.bestScore}`,
-            16,
-            level.unlocked ? "#f2f4f8" : "#69758a",
-            "52px",
-          ),
+          row,
         );
       }
       return;

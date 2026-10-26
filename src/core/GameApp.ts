@@ -10,9 +10,16 @@ import {
   type PhysicsAggregate,
   Scene,
   Vector3,
+  MeshBuilder,
 } from "@babylonjs/core";
 import { engineConfig, physicsConfig } from "../data/config/engineConfig";
-import { destructionConfig, launcherConfig, progressionConfig, scoreConfig } from "../data/config/gameplayConfig";
+import {
+  boundaryConfig,
+  destructionConfig,
+  launcherConfig,
+  progressionConfig,
+  scoreConfig,
+} from "../data/config/gameplayConfig";
 import { collectionConfig } from "../data/config/collectionConfig";
 import { levelCatalog } from "../data/content/levels/levelCatalog";
 import type { LevelBlockout } from "../data/content/levels/levelTypes";
@@ -28,6 +35,8 @@ import type { DestructionResult } from "../game/destruction/DestructibleObject";
 import { DestructionService } from "../game/destruction/DestructionService";
 import { createLauncherMarker } from "../game/launcher/createLauncherMarker";
 import { buildLevelBlockout } from "../game/level/buildLevelBlockout";
+import { mapBounds } from "../game/level/boundaryMath";
+import { selectAmbience, type AmbienceSelection } from "../game/level/ambienceMath";
 import { unlockedLevelCount } from "../game/level/levelProgress";
 import { resolveLevel, totalSkillPoints, xpFromScore } from "../game/progression/progressionMath";
 import { QuestService } from "../game/quest/QuestService";
@@ -65,6 +74,17 @@ const STATE_LABELS: Record<ShotState, string> = {
   Settling: "Stabilisation",
   ShotComplete: "Tir termine",
 };
+
+const DAMAGE_STATE_LABELS = {
+  Intact: "intacte",
+  Damaged: "endommagee",
+  Critical: "critique",
+  Destroyed: "detruite",
+} as const;
+
+function damageStateLabel(state: keyof typeof DAMAGE_STATE_LABELS): string {
+  return DAMAGE_STATE_LABELS[state];
+}
 
 const ABILITY_LABELS: Record<AbilityState, string> = {
   Unavailable: "indisponible",
@@ -106,10 +126,17 @@ export class GameApp {
   private readonly skills = new SkillTreeService();
   private readonly abilityEffects: AbilityEffects;
   private loadingCamera: FreeCamera | undefined;
+  private ambientLight: HemisphericLight | undefined;
+  private sunLight: DirectionalLight | undefined;
+  private ambience: AmbienceSelection | undefined;
+  private ambienceMeshes: Mesh[] = [];
 
   private level: LevelSystems | undefined;
   private levelIndex = 0;
   private sessionResultsShown = false;
+  private sessionMode: "campaign" | "free" | "cheat" = "campaign";
+  private baseSessionMode: "campaign" | "free" = "campaign";
+  private cheatEnabled = false;
   private lastShotState: ShotState = "Aiming";
   private abilityController: AbilityController | undefined;
 
@@ -118,6 +145,11 @@ export class GameApp {
     if (event.code === "KeyA") {
       event.preventDefault();
       this.activateAbility();
+      return;
+    }
+    if (event.code === "KeyB") {
+      event.preventDefault();
+      this.activateCheat();
       return;
     }
     if (event.code !== "Space") {
@@ -156,6 +188,9 @@ export class GameApp {
       onUpgradeSkill: (nodeId) => this.upgradeSkill(nodeId),
       onDrawCollection: (category) => this.drawCollection(category),
       onEquipCollection: (category, id) => this.equipCollection(category, id),
+      onSelectLevel: (index) => this.startFreeLevel(index),
+      onToggleCheat: () => this.toggleCheat(),
+      onActivateCheat: () => this.activateCheat(),
     });
 
     window.addEventListener("resize", this.handleResize);
@@ -199,12 +234,14 @@ export class GameApp {
     const ambient = new HemisphericLight("ambientLight", new Vector3(0.2, 1, -0.3), this.scene);
     ambient.intensity = 0.75;
     ambient.groundColor = Color3.FromHexString("#6b7589");
+    this.ambientLight = ambient;
 
     const sun = new DirectionalLight("sunLight", new Vector3(-0.35, -1, 0.5), this.scene);
     sun.intensity = 1.1;
+    this.sunLight = sun;
   }
 
-  private loadLevel(index: number): void {
+  private loadLevel(index: number, mode: "campaign" | "free" = "campaign"): void {
     const blockout = levelCatalog[index];
     if (!blockout) {
       return;
@@ -212,6 +249,11 @@ export class GameApp {
 
     this.unloadLevel();
     this.levelIndex = index;
+    this.sessionMode = mode;
+    this.baseSessionMode = mode;
+    this.cheatEnabled = false;
+    this.ambience = selectAmbience(blockout.weatherOptions, blockout.timeOfDayOptions);
+    this.applyAmbience();
 
     const destruction = new DestructionService(new DebrisBudget(destructionConfig.maxActiveDebris));
     const built = buildLevelBlockout(this.scene, blockout, destruction);
@@ -244,6 +286,52 @@ export class GameApp {
 
     this.applySkillBonuses();
     this.restartSession();
+  }
+
+  private applyAmbience(): void {
+    if (!this.ambience || !this.ambientLight || !this.sunLight) {
+      return;
+    }
+    const night = this.ambience.timeOfDay === "night";
+    const dusk = this.ambience.timeOfDay === "dusk";
+    const fog = this.ambience.weather === "fog";
+    const rain = this.ambience.weather === "rain";
+    this.clearAmbienceMeshes();
+    this.scene.clearColor = Color4.FromHexString(
+      night ? "#101522ff" : dusk ? "#342d3dff" : fog ? "#4d5660ff" : "#10131aff",
+    );
+    this.scene.fogMode = fog ? Scene.FOGMODE_EXP2 : Scene.FOGMODE_NONE;
+    this.scene.fogColor = Color3.FromHexString(fog ? "#6c747b" : "#10131a");
+    this.scene.fogDensity = fog ? 0.008 : 0;
+    this.ambientLight.intensity = night ? 0.42 : fog ? 0.62 : 0.75;
+    this.sunLight.intensity = night ? 0.25 : rain ? 0.7 : dusk ? 0.8 : 1.1;
+    if (rain) {
+      this.createRainVisual();
+    }
+  }
+
+  private createRainVisual(): void {
+    for (let index = 0; index < 72; index += 1) {
+      const x = (Math.random() - 0.5) * 120;
+      const z = Math.random() * 150 - 45;
+      const y = 10 + Math.random() * 24;
+      const streak = MeshBuilder.CreateLines(
+        `rain_${index}`,
+        { points: [new Vector3(x, y, z), new Vector3(x - 0.3, y - 2.4, z + 0.15)] },
+        this.scene,
+      );
+      streak.color = Color3.FromHexString("#9dbbd0");
+      streak.alpha = 0.45;
+      streak.isPickable = false;
+      this.ambienceMeshes.push(streak);
+    }
+  }
+
+  private clearAmbienceMeshes(): void {
+    for (const mesh of this.ambienceMeshes) {
+      mesh.dispose();
+    }
+    this.ambienceMeshes = [];
   }
 
   private unloadLevel(): void {
@@ -279,6 +367,7 @@ export class GameApp {
     }
 
     this.abilityController?.update(deltaMs);
+    this.rescueCharacterIfNeeded();
     this.combo.update(performance.now());
     level.destruction.update();
     level.secrets.animate(deltaMs);
@@ -318,6 +407,35 @@ export class GameApp {
     };
   }
 
+  private rescueCharacterIfNeeded(): void {
+    const level = this.level;
+    if (!level) {
+      return;
+    }
+
+    const bounds = mapBounds(
+      level.blockout.groundSize,
+      boundaryConfig.horizontalMargin,
+      boundaryConfig.lowerY,
+      boundaryConfig.upperY,
+    );
+    const bucketCenter = {
+      x: 0,
+      y: boundaryConfig.bucketCenterY,
+      z: 0,
+    };
+    const rescuedCount = level.shots.rescueCharactersOutside(bounds, bucketCenter);
+    if (rescuedCount > 0) {
+      level.director.setMode("follow");
+      level.director.focusImmediately(new Vector3(bucketCenter.x, bucketCenter.y, bucketCenter.z));
+      this.hud.showSecret(
+        rescuedCount === 1
+          ? "Easter egg : bienvenue dans les Back Rooms."
+          : `${rescuedCount} personnages ont rejoint les Back Rooms.`,
+      );
+    }
+  }
+
   private refreshQuestProgress(): void {
     const level = this.level;
     if (!level) {
@@ -344,18 +462,25 @@ export class GameApp {
     const secretXp = level.blockout.secrets
       .filter((secret) => discoveredSecrets.has(secret.id))
       .reduce((sum, secret) => sum + secret.xpReward, 0);
-    const gainedXp = xpFromScore(total, progressionConfig) + questXp + secretXp;
-    const gainedCurrency = Math.floor(total * collectionConfig.currencyPerScorePoint);
+    const official = this.sessionMode === "campaign";
+    const gainedXp = official
+      ? xpFromScore(total, progressionConfig) + questXp + secretXp
+      : 0;
+    const gainedCurrency = official
+      ? Math.floor(total * collectionConfig.currencyPerScorePoint)
+      : 0;
 
-    void this.save
-      .recordSessionResult({
-        levelId: level.blockout.id,
-        score: total,
-        gainedXp,
-        gainedCurrency,
-        completedQuestIds: completedQuests.map((quest) => quest.id),
-        discoveredSecretIds: [...discoveredSecrets],
-      })
+    const resultSave = official
+      ? this.save.recordSessionResult({
+          levelId: level.blockout.id,
+          score: total,
+          gainedXp,
+          gainedCurrency,
+          completedQuestIds: completedQuests.map((quest) => quest.id),
+          discoveredSecretIds: [...discoveredSecrets],
+        })
+      : Promise.resolve(false);
+    void resultSave
       .then((isNewRecord) => {
         const progress = resolveLevel(this.save.totalXp, progressionConfig);
         this.quests.setKnownCompleted(this.save.completedQuestIds);
@@ -379,6 +504,7 @@ export class GameApp {
           skillPoints: totalSkillPoints(progress.level, progressionConfig),
           completedQuests: completedQuests.map((quest) => quest.name),
           hasNextLevel: this.nextLevelIsUnlocked(),
+          official,
         });
       });
   }
@@ -542,6 +668,7 @@ export class GameApp {
         gachaCost: collectionConfig.gachaCost,
         entries,
         levels: levelCatalog.map((level, index) => ({
+          index,
           name: level.displayName,
           targetScore: level.targetScore,
           bestScore: this.save.getBestScore(level.id),
@@ -563,6 +690,9 @@ export class GameApp {
   }
 
   private nextLevelIsUnlocked(): boolean {
+    if (this.sessionMode !== "campaign") {
+      return false;
+    }
     const next = this.levelIndex + 1;
     return next < levelCatalog.length && next < unlockedLevelCount(levelCatalog, this.save.bestScores);
   }
@@ -597,6 +727,35 @@ export class GameApp {
     }
   }
 
+  private toggleCheat(): void {
+    if (this.level?.shots.currentState !== "Aiming" || this.sessionMode === "free") {
+      return;
+    }
+    this.cheatEnabled = !this.cheatEnabled;
+    this.sessionMode = this.cheatEnabled ? "cheat" : this.baseSessionMode;
+    this.hud.showSecret(
+      this.cheatEnabled
+        ? "Mode triche active : lancez un personnage, puis utilisez la bombe atomique."
+        : "Mode triche desactive.",
+    );
+  }
+
+  private activateCheat(): void {
+    if (!this.cheatEnabled) {
+      this.hud.showSecret("Activez d'abord le mode triche.");
+      return;
+    }
+    if (this.level?.shots.currentState === "Aiming") {
+      this.hud.showSecret("Lancez d'abord un personnage pour utiliser la bombe atomique.");
+      return;
+    }
+    if (this.abilityController?.activateCheat()) {
+      this.hud.showSecret("Bravo, vous etes le plus fort. Vous avez gagne.");
+    } else {
+      this.hud.showSecret("La bombe atomique a deja ete utilisee pour ce tir.");
+    }
+  }
+
   private awardDestruction(result: DestructionResult): void {
     if (result.stagesLost <= 0) {
       return;
@@ -627,10 +786,12 @@ export class GameApp {
     const isAiming = level.shots.currentState === "Aiming";
     // La portee annoncee doit correspondre au reticule, donc au trajet tronque par le decor.
     const trajectory = clipTrajectoryToScene(this.scene, level.aiming.getTrajectory());
+    const aimTarget = level.destruction.getAimTarget(trajectory.impactMesh);
 
     level.preview.setVisible(isAiming && !level.shots.isSessionComplete);
     if (isAiming) {
       level.preview.update(trajectory);
+      level.preview.setTarget(aimTarget);
     }
 
     this.hud.setActionMode(level.shots.canEndManually ? "end" : "launch");
@@ -644,6 +805,10 @@ export class GameApp {
       passivesLabel: `${describePassive(this.build.character.passive)} / ${describePassive(this.build.item.passive)}`,
     });
     this.refreshAbilityHud(isAiming);
+    this.hud.setCheatEnabled(
+      this.cheatEnabled,
+      !isAiming && this.sessionMode === "cheat" && level.shots.canEndManually,
+    );
     this.hud.setSkillButtonLabel(this.skills.availablePoints);
     if (this.hud.skillPanelOpen) {
       this.hud.renderSkills(
@@ -652,10 +817,13 @@ export class GameApp {
         describeBonuses(this.skills.bonuses),
       );
     }
-    this.hud.setStatus(this.buildStatusLines(trajectory.range).join("\n"));
+    this.hud.setStatus(this.buildStatusLines(trajectory.range, aimTarget).join("\n"));
   }
 
-  private buildStatusLines(range: number): string[] {
+  private buildStatusLines(
+    range: number,
+    aimTarget: ReturnType<DestructionService["getAimTarget"]>,
+  ): string[] {
     const level = this.level;
     if (!level) {
       return [];
@@ -672,11 +840,18 @@ export class GameApp {
 
     const lines = [
       `${level.blockout.displayName} - ${STATE_LABELS[level.shots.currentState]}`,
+      `${ambienceLabel(this.ambience)} - effets visuels`,
       `Score : ${total} / ${level.blockout.targetScore}`,
       `Tirs restants : ${level.shots.shotsRemaining} / ${level.blockout.shotsAllowed}`,
       `Objets detruits : ${level.destruction.destroyedCount} / ${level.destruction.totalCount}`,
       `Secrets : ${level.secrets.discoveredCount} / ${level.secrets.totalCount}`,
     ];
+
+    if (level.shots.currentState === "Aiming" && aimTarget) {
+      lines.push(
+        `Cible : ${aimTarget.displayName} - ${damageStateLabel(aimTarget.state)} (${aimTarget.totalStages - aimTarget.remainingStages}/${aimTarget.totalStages} degats)`,
+      );
+    }
 
     if (this.combo.currentChain > 1) {
       lines.push(`Combo x${this.combo.currentMultiplier} (${this.combo.currentChain} destructions)`);
@@ -738,6 +913,19 @@ export class GameApp {
     }
   }
 
+  private startFreeLevel(index: number): void {
+    if (this.level?.shots.currentState !== "Aiming") {
+      this.refreshCollection("Selection disponible uniquement pendant la visee");
+      return;
+    }
+    if (index < 0 || index >= unlockedLevelCount(levelCatalog, this.save.bestScores)) {
+      this.refreshCollection("Niveau encore verrouille");
+      return;
+    }
+    this.hud.setCollectionVisible(false);
+    this.loadLevel(index, "free");
+  }
+
   private restartSession(): void {
     const level = this.level;
     if (!level) {
@@ -770,6 +958,25 @@ function cameraModeFor(state: ShotState): "aim" | "follow" | "result" {
     default:
       return "aim";
   }
+}
+
+function ambienceLabel(ambience: AmbienceSelection | undefined): string {
+  if (!ambience) {
+    return "Ambiance standard";
+  }
+  const weather: Record<AmbienceSelection["weather"], string> = {
+    sunny: "Soleil",
+    cloudy: "Nuages",
+    rain: "Pluie",
+    fog: "Brouillard",
+  };
+  const timeOfDay: Record<AmbienceSelection["timeOfDay"], string> = {
+    dawn: "Aube",
+    day: "Jour",
+    dusk: "Crepuscule",
+    night: "Nuit",
+  };
+  return `${weather[ambience.weather]} / ${timeOfDay[ambience.timeOfDay]}`;
 }
 
 function collectionName(category: CollectionCategory, id: string): string {

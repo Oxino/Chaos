@@ -29,6 +29,9 @@ export interface PrototypeHudActions {
   readonly onUpgradeSkill: (nodeId: string) => void;
   readonly onDrawCollection: (category: CollectionCategory) => void;
   readonly onEquipCollection: (category: CollectionCategory, id: string) => void;
+  readonly onSelectLevel: (index: number) => void;
+  readonly onToggleCheat: () => void;
+  readonly onActivateCheat: () => void;
 }
 
 export interface BuildSummary {
@@ -59,6 +62,8 @@ export class PrototypeHud {
   private readonly skillButton: Button;
   private readonly collectionPanel: CollectionPanel;
   private readonly collectionButton: Button;
+  private readonly cheatToggleButton: Button;
+  private readonly cheatButton: Button;
   private secretMs = 0;
   private actionMode: HudActionMode = "launch";
 
@@ -168,6 +173,7 @@ export class PrototypeHud {
       this.texture,
       actions.onDrawCollection,
       actions.onEquipCollection,
+      actions.onSelectLevel,
       () => this.collectionPanel.setVisible(false),
     );
     this.collectionButton = this.createButton("collectionButton", "Collection", "#3f8f6b", () =>
@@ -180,6 +186,30 @@ export class PrototypeHud {
     this.collectionButton.left = "16px";
     this.collectionButton.top = "275px";
     this.texture.addControl(this.collectionButton);
+
+    this.cheatToggleButton = this.createButton("cheatToggleButton", "Triche : desactivee", "#6b3f3f", actions.onToggleCheat);
+    this.cheatToggleButton.width = "220px";
+    this.cheatToggleButton.height = "44px";
+    this.cheatToggleButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+    this.cheatToggleButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    this.cheatToggleButton.paddingRight = "16px";
+    this.cheatToggleButton.paddingTop = "16px";
+    this.texture.addControl(this.cheatToggleButton);
+
+    this.cheatButton = this.createButton(
+      "cheatButton",
+      "Bombe atomique (apres lancer)",
+      "#8f3f3f",
+      actions.onActivateCheat,
+    );
+    this.cheatButton.width = "240px";
+    this.cheatButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+    this.cheatButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+    this.cheatButton.paddingRight = "16px";
+    this.cheatButton.top = "-88px";
+    this.cheatButton.zIndex = 10;
+    this.cheatButton.isVisible = false;
+    this.texture.addControl(this.cheatButton);
 
     this.buildPanel = new StackPanel("buildPanel");
     this.buildPanel.width = "240px";
@@ -242,6 +272,14 @@ export class PrototypeHud {
     this.abilityButton.alpha = enabled ? 1 : 0.45;
   }
 
+  setCheatEnabled(enabled: boolean, canActivate: boolean): void {
+    setButtonLabel(this.cheatToggleButton, enabled ? "Triche : activee" : "Triche : desactivee");
+    this.cheatToggleButton.background = enabled ? "#8f3f3f" : "#6b3f3f";
+    this.cheatButton.isVisible = enabled;
+    this.cheatButton.isEnabled = canActivate;
+    this.cheatButton.alpha = canActivate ? 1 : 0.45;
+  }
+
   setBuild(summary: BuildSummary): void {
     setButtonLabel(this.characterButton, summary.characterLabel);
     setButtonLabel(this.itemButton, summary.itemLabel);
@@ -278,6 +316,10 @@ export class PrototypeHud {
     this.collectionPanel.renderProfile(profile, message);
   }
 
+  setCollectionVisible(visible: boolean): void {
+    this.collectionPanel.setVisible(visible);
+  }
+
   showResults(results: SessionResults): void {
     this.impactIndicator.clear();
     this.resultsPanel.show(results);
@@ -305,7 +347,7 @@ export class PrototypeHud {
 
   showSecret(name: string): void {
     this.secretText.text = `Secret decouvert : ${name}`;
-    this.secretMs = 2600;
+    this.secretMs = name.includes("Back Rooms") ? 6000 : 2600;
   }
 
   setActionMode(mode: HudActionMode): void {

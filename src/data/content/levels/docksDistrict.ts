@@ -17,6 +17,8 @@ export const docksDistrict: LevelBlockout = {
   targetScore: 30000,
   groundSize: 200,
   groundColor: "#35414f",
+  weatherOptions: ["cloudy", "rain", "fog"],
+  timeOfDayOptions: ["dawn", "day", "dusk"],
   launcher: {
     position: { x: 0, y: 4, z: -52 },
     restDirection: { x: 0, y: 0.42, z: 1 },
