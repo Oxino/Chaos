@@ -9,7 +9,7 @@ export const destructibleCatalog: Readonly<Record<string, DestructibleDefinition
     id: "car",
     displayName: "Voiture",
     destructionMode: "crush",
-    stages: 1,
+    stages: 3,
     minimumImpactThreshold: 300,
     damageScale: 0.01,
     scoreValue: 300,
