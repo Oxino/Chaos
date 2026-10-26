@@ -11,6 +11,7 @@ import { explosionFalloff } from "../ability/explosionMath";
 import type { DebrisBudget } from "./DebrisBudget";
 import type { DestructibleBuilding } from "./DestructibleBuilding";
 import type { DestructibleObject, DestructionResult } from "./DestructibleObject";
+import { resolveImpact } from "./impactMath";
 
 export type DestructionListener = (result: DestructionResult) => void;
 
@@ -30,6 +31,10 @@ export interface AimTargetInfo {
   readonly state: DestructibleState;
   readonly remainingStages: number;
   readonly totalStages: number;
+  readonly impactThreshold: number;
+  readonly damageScale: number;
+  readonly estimatedImpact: number;
+  readonly estimatedStagesLost: number;
 }
 
 export type ImpactListener = (report: ImpactReport) => void;
@@ -109,7 +114,7 @@ export class DestructionService {
     this.impactListeners.add(listener);
   }
 
-  getAimTarget(mesh: AbstractMesh | null): AimTargetInfo | null {
+  getAimTarget(mesh: AbstractMesh | null, estimatedImpact = 0): AimTargetInfo | null {
     if (!mesh) {
       return null;
     }
@@ -121,6 +126,14 @@ export class DestructionService {
       id: destructible.id,
       displayName: destructible.definition.displayName,
       state: destructible.state,
+      impactThreshold: destructible.definition.minimumImpactThreshold,
+      damageScale: destructible.definition.damageScale,
+      estimatedImpact,
+      estimatedStagesLost: resolveImpact(
+        estimatedImpact,
+        destructible.currentStage,
+        destructible.definition,
+      ).stagesLost,
       remainingStages: Math.max(0, destructible.currentStage),
       totalStages: destructible.definition.stages,
     };

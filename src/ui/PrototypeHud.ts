@@ -76,7 +76,7 @@ export class PrototypeHud {
     this.statusText.outlineColor = "#10131a";
     this.statusText.outlineWidth = 4;
     this.statusText.width = "640px";
-    this.statusText.height = "215px";
+    this.statusText.height = "270px";
     this.statusText.paddingLeft = "16px";
     this.statusText.paddingTop = "16px";
     this.statusText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
@@ -166,7 +166,7 @@ export class PrototypeHud {
     this.skillButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
     this.skillButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
     this.skillButton.left = "16px";
-    this.skillButton.top = "225px";
+    this.skillButton.top = "280px";
     this.texture.addControl(this.skillButton);
 
     this.collectionPanel = new CollectionPanel(
@@ -184,7 +184,7 @@ export class PrototypeHud {
     this.collectionButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
     this.collectionButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
     this.collectionButton.left = "16px";
-    this.collectionButton.top = "275px";
+    this.collectionButton.top = "330px";
     this.texture.addControl(this.collectionButton);
 
     this.cheatToggleButton = this.createButton("cheatToggleButton", "Triche : desactivee", "#6b3f3f", actions.onToggleCheat);

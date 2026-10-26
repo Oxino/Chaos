@@ -28,6 +28,21 @@ export function resolveImpact(
   return { qualifies: true, stagesLost, nextStage, destroyed: nextStage === 0 };
 }
 
+/** Impact necessaire pour retirer un nombre donne d'etapes restantes. */
+export function requiredImpactForStages(
+  stages: number,
+  threshold: number,
+  damageScale: number,
+): number {
+  if (stages <= 0) {
+    return 0;
+  }
+  if (damageScale <= 0) {
+    return threshold;
+  }
+  return threshold + (stages - 1) / damageScale;
+}
+
 /** Repartit les etapes restantes sur les etats visuels du \u00a715.4. */
 export function stateForStage(stage: number, totalStages: number): DestructibleState {
   if (stage <= 0) {

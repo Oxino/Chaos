@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DestructibleDefinition } from "../../data/content/destructibles/destructibleTypes";
-import { resolveImpact, stateForStage } from "./impactMath";
+import { requiredImpactForStages, resolveImpact, stateForStage } from "./impactMath";
 
 const car: DestructibleDefinition = {
   id: "car",
@@ -55,5 +55,13 @@ describe("stateForStage", () => {
     expect(stateForStage(3, 4)).toBe("Damaged");
     expect(stateForStage(1, 4)).toBe("Critical");
     expect(stateForStage(0, 4)).toBe("Destroyed");
+  });
+});
+
+describe("requiredImpactForStages", () => {
+  it("calcule le seuil pour toutes les etapes restantes", () => {
+    expect(requiredImpactForStages(4, 220, 0.01)).toBe(520);
+    expect(requiredImpactForStages(1, 220, 0.01)).toBe(220);
+    expect(requiredImpactForStages(0, 220, 0.01)).toBe(0);
   });
 });

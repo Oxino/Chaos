@@ -64,6 +64,10 @@ export class AimingController {
     return this.build.launchSpeed(this.powerRatio);
   }
 
+  getLaunchImpulse(): number {
+    return this.build.launchImpulse(this.powerRatio);
+  }
+
   getTrajectory(groundY = 0): TrajectoryResult {
     return computeTrajectory({
       origin: this.anchor.position,

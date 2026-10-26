@@ -33,6 +33,7 @@ import { CharacterSpawner } from "../game/character/CharacterSpawner";
 import { DebrisBudget } from "../game/destruction/DebrisBudget";
 import type { DestructionResult } from "../game/destruction/DestructibleObject";
 import { DestructionService } from "../game/destruction/DestructionService";
+import { requiredImpactForStages } from "../game/destruction/impactMath";
 import { createLauncherMarker } from "../game/launcher/createLauncherMarker";
 import { buildLevelBlockout } from "../game/level/buildLevelBlockout";
 import { mapBounds } from "../game/level/boundaryMath";
@@ -786,7 +787,10 @@ export class GameApp {
     const isAiming = level.shots.currentState === "Aiming";
     // La portee annoncee doit correspondre au reticule, donc au trajet tronque par le decor.
     const trajectory = clipTrajectoryToScene(this.scene, level.aiming.getTrajectory());
-    const aimTarget = level.destruction.getAimTarget(trajectory.impactMesh);
+    const aimTarget = level.destruction.getAimTarget(
+      trajectory.impactMesh,
+      level.aiming.getLaunchImpulse(),
+    );
 
     level.preview.setVisible(isAiming && !level.shots.isSessionComplete);
     if (isAiming) {
@@ -848,8 +852,21 @@ export class GameApp {
     ];
 
     if (level.shots.currentState === "Aiming" && aimTarget) {
+      const damageDone = aimTarget.totalStages - aimTarget.remainingStages;
+      const estimatedRemaining = Math.max(
+        0,
+        aimTarget.remainingStages - aimTarget.estimatedStagesLost,
+      );
+      const destroyImpact = requiredImpactForStages(
+        aimTarget.remainingStages,
+        aimTarget.impactThreshold,
+        aimTarget.damageScale,
+      );
       lines.push(
-        `Cible : ${aimTarget.displayName} - ${damageStateLabel(aimTarget.state)} (${aimTarget.totalStages - aimTarget.remainingStages}/${aimTarget.totalStages} degats)`,
+        `Cible : ${aimTarget.displayName} - ${damageStateLabel(aimTarget.state)}`,
+        `Degats : ${damageDone}/${aimTarget.totalStages} etapes | impact estime ${aimTarget.estimatedImpact.toFixed(0)} N.s`,
+        `Tir : -${aimTarget.estimatedStagesLost} etape(s), restant ${estimatedRemaining}/${aimTarget.totalStages}`,
+        `Seuil : ${aimTarget.impactThreshold.toFixed(0)} N.s | destruction a ${destroyImpact.toFixed(0)} N.s`,
       );
     }
 
