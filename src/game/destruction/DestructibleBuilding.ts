@@ -113,6 +113,7 @@ export function createBuilding(
     displayName: `${definition.displayName} (section)`,
     destructionMode: "topple",
     stages: definition.stagesPerSection,
+    maxHealth: definition.sectionMaxHealth,
     minimumImpactThreshold: definition.minimumImpactThreshold,
     damageScale: definition.damageScale,
     scoreValue: definition.sectionScoreValue,

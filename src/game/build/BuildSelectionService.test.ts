@@ -58,4 +58,17 @@ describe("BuildSelectionService collection upgrades", () => {
     expect(upgradedAbility.impulse).toBeCloseTo(baseAbility.impulse * 1.15);
     expect(upgradedAbility.impactStrength).toBeCloseTo(baseAbility.impactStrength * 1.15);
   });
+
+  it("permet de desequiper l'objet puis de revenir au premier objet", () => {
+    const build = new BuildSelectionService();
+    for (let index = 0; index < 5; index += 1) {
+      build.cycleItem();
+    }
+
+    expect(build.item).toBeNull();
+    expect(build.ability).toBeNull();
+
+    build.cycleItem();
+    expect(build.item?.id).toBe("item_stone");
+  });
 });

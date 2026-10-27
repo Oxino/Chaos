@@ -14,6 +14,8 @@ export interface DestructibleDefinition {
   readonly destructionMode: DestructionMode;
   /** Nombre d'etapes de degats. 1 = intact puis detruit en un impact qualifiant. */
   readonly stages: number;
+  /** Vie maximale de l'objet, en N.s de degats. */
+  readonly maxHealth: number;
   /** Impulsion minimale, en N.s, en dessous de laquelle l'impact est ignore (spec 6.4). */
   readonly minimumImpactThreshold: number;
   /** Etapes perdues par N.s au-dela du seuil. */

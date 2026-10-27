@@ -13,6 +13,7 @@ export const buildingCatalog: Readonly<Record<string, BuildingDefinition>> = {
     width: 10,
     depth: 10,
     stagesPerSection: 3,
+    sectionMaxHealth: 1200,
     minimumImpactThreshold: 150,
     damageScale: 0.004,
     sectionScoreValue: 200,

@@ -5,7 +5,7 @@ import type { ResolvedBuild } from "../build/buildMath";
 export interface ActiveBuildDebugView {
   readonly launcherId: string;
   readonly characterId: string;
-  readonly itemId: string;
+  readonly itemId: string | null;
   readonly upgrades: Readonly<{ launcher: number; character: number; item: number }>;
   readonly resolved: ResolvedBuild;
   readonly characterMass: number;

@@ -20,6 +20,7 @@ Le jeu est conçu pour le PC et le mobile en orientation paysage. Il est solo, g
 - Dégâts et état du niveau persistants pendant une partie, puis réinitialisés à la partie suivante.
 - Score direct, combos, objectifs de niveau et écran de résultats.
 - Builds composés d'un lanceur, d'un personnage et d'un objet.
+- Objets consommés au lancement : 5 utilisations par défaut, recharge de 5 utilisations pour 10 monnaies uniquement après déblocage ; un build peut être lancé sans objet lorsque le stock est vide.
 - Capacités actives Réacteur et Bombe.
 - Progression XP, niveaux, quêtes, secrets, compétences et plusieurs niveaux.
 - Collection, inventaire, monnaie gagnée en jeu et tirages de gacha.

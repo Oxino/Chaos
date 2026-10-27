@@ -11,7 +11,7 @@ import type {
   DestructibleDefinition,
   DestructibleState,
 } from "../../data/content/destructibles/destructibleTypes";
-import { resolveImpact, stateForStage } from "./impactMath";
+import { maxHealthForDefinition, resolveImpact, stateForHealth } from "./impactMath";
 
 /** Aplatissement applique a un objet ecrase. La forme de collision, elle, ne change pas. */
 const CRUSH_SCALE_Y = 0.42;
@@ -32,6 +32,9 @@ export interface DestructionResult {
   readonly stagesLost: number;
   /** Etapes restantes apres l'impact, utilisee pour rendre l'attribution idempotente. */
   readonly remainingStages: number;
+  readonly currentHealth: number;
+  readonly maxHealth: number;
+  readonly damageApplied: number;
 }
 
 /**
@@ -39,7 +42,7 @@ export interface DestructionResult {
  * partie et sait revenir a son etat initial lors de la reinitialisation (spec 6.3).
  */
 export class DestructibleObject {
-  private stage: number;
+  private health: number;
   private frozen = false;
   private readonly initialPosition: Vector3;
   private readonly initialRotation: Quaternion;
@@ -54,7 +57,7 @@ export class DestructibleObject {
     private readonly scene: Scene,
     private readonly materials: DestructibleMaterials,
   ) {
-    this.stage = definition.stages;
+    this.health = maxHealthForDefinition(definition);
     this.initialPosition = mesh.position.clone();
     this.initialRotation = (mesh.rotationQuaternion ?? Quaternion.Identity()).clone();
     this.initialScaling = mesh.scaling.clone();
@@ -62,11 +65,23 @@ export class DestructibleObject {
   }
 
   get state(): DestructibleState {
-    return stateForStage(this.stage, this.definition.stages);
+    return stateForHealth(this.health, this.maxHealth);
   }
 
   get currentStage(): number {
-    return this.stage;
+    return Math.ceil(this.health / this.healthPerStage);
+  }
+
+  get currentHealth(): number {
+    return this.health;
+  }
+
+  get maxHealth(): number {
+    return maxHealthForDefinition(this.definition);
+  }
+
+  get healthPerStage(): number {
+    return this.maxHealth / this.definition.stages;
   }
 
   get renderMesh(): Mesh {
@@ -74,7 +89,7 @@ export class DestructibleObject {
   }
 
   get isDestroyed(): boolean {
-    return this.stage <= 0;
+    return this.health <= 0;
   }
 
   get isFrozen(): boolean {
@@ -95,8 +110,8 @@ export class DestructibleObject {
     if (this.isDestroyed) {
       return null;
     }
-    const stagesLost = this.stage;
-    this.stage = 0;
+    const stagesLost = this.currentStage;
+    this.health = 0;
     this.applyVisualState();
     this.applyDestruction();
     return {
@@ -107,6 +122,9 @@ export class DestructibleObject {
       destroyed: true,
       stagesLost,
       remainingStages: 0,
+      currentHealth: 0,
+      maxHealth: this.maxHealth,
+      damageApplied: this.maxHealth,
     };
   }
 
@@ -125,12 +143,12 @@ export class DestructibleObject {
 
   /** Renvoie null si l'impact ne qualifie pas : aucun evenement ne doit alors etre emis. */
   applyImpact(intensity: number): DestructionResult | null {
-    const outcome = resolveImpact(intensity, this.stage, this.definition);
+    const outcome = resolveImpact(intensity, this.health, this.definition);
     if (!outcome.qualifies) {
       return null;
     }
 
-    this.stage = outcome.nextStage;
+    this.health = outcome.nextHealth;
     this.applyVisualState();
 
     if (outcome.destroyed) {
@@ -145,11 +163,14 @@ export class DestructibleObject {
       destroyed: outcome.destroyed,
       stagesLost: outcome.stagesLost,
       remainingStages: outcome.nextStage,
+      currentHealth: this.health,
+      maxHealth: this.maxHealth,
+      damageApplied: outcome.damageApplied,
     };
   }
 
   reset(): void {
-    this.stage = this.definition.stages;
+    this.health = this.maxHealth;
     this.frozen = false;
     this.mesh.material = this.initialMaterial;
     this.mesh.scaling.copyFrom(this.initialScaling);

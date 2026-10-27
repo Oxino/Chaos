@@ -9,6 +9,8 @@ export interface BuildingDefinition {
   readonly depth: number;
   /** Etapes de degats par section avant qu'elle ne se detache. */
   readonly stagesPerSection: number;
+  /** Vie maximale d'une section, en N.s de degats. */
+  readonly sectionMaxHealth: number;
   readonly minimumImpactThreshold: number;
   readonly damageScale: number;
   readonly sectionScoreValue: number;

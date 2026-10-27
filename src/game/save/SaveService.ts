@@ -7,9 +7,11 @@ import {
   withBestScore,
   withCompletedQuests,
   withDiscoveredSecrets,
+  withoutCollectionItem,
   withCurrency,
   withSkillRanks,
   withXp,
+  withCollectionUses,
 } from "./saveSchema";
 
 const DATABASE_NAME = "chaos";
@@ -73,6 +75,18 @@ export class SaveService {
   async saveCollection(data: SaveData): Promise<void> {
     this.data = data;
     await this.persist();
+  }
+
+  async consumeItem(itemId: string): Promise<void> {
+    const updated = withoutCollectionItem(this.data, "items", itemId);
+    if (updated === this.data) {
+      return;
+    }
+    await this.saveCollection(updated);
+  }
+
+  async addItemUses(itemId: string, uses: number): Promise<void> {
+    await this.saveCollection(withCollectionUses(this.data, "items", itemId, uses));
   }
 
   async replace(raw: unknown): Promise<SaveData> {

@@ -33,7 +33,6 @@ import { CharacterSpawner } from "../game/character/CharacterSpawner";
 import { DebrisBudget } from "../game/destruction/DebrisBudget";
 import type { DestructionResult } from "../game/destruction/DestructibleObject";
 import { DestructionService } from "../game/destruction/DestructionService";
-import { requiredImpactForStages } from "../game/destruction/impactMath";
 import { createLauncherMarker } from "../game/launcher/createLauncherMarker";
 import { buildLevelBlockout } from "../game/level/buildLevelBlockout";
 import { mapBounds } from "../game/level/boundaryMath";
@@ -48,6 +47,7 @@ import { GachaService } from "../game/collection/GachaService";
 import {
   createEmptySave,
   withCollectionItem,
+  withCollectionUses,
   withCurrency,
   withUpgradeLevel,
   type CollectionCategory,
@@ -188,6 +188,7 @@ export class GameApp {
       onActivateAbility: () => this.activateAbility(),
       onUpgradeSkill: (nodeId) => this.upgradeSkill(nodeId),
       onDrawCollection: (category) => this.drawCollection(category),
+      onBuyItem: (id) => this.buyItemUses(id),
       onEquipCollection: (category, id) => this.equipCollection(category, id),
       onSelectLevel: (index) => this.startFreeLevel(index),
       onToggleCheat: () => this.toggleCheat(),
@@ -546,6 +547,27 @@ export class GameApp {
     );
   }
 
+  private buyItemUses(itemId: string): void {
+    if (!Object.prototype.hasOwnProperty.call(this.save.inventory.items, itemId)) {
+      this.refreshCollection("Objet non debloque");
+      return;
+    }
+    if (this.save.currency < collectionConfig.itemPurchaseCost) {
+      this.refreshCollection("Monnaie insuffisante");
+      return;
+    }
+    const updated = withCollectionUses(
+      withCurrency(this.save.snapshot, -collectionConfig.itemPurchaseCost),
+      "items",
+      itemId,
+      collectionConfig.defaultItemUses,
+    );
+    void this.save.saveCollection(updated).then(() => {
+      this.build.applyCollectionOwnership(this.save.inventory);
+      this.refreshCollection(`${collectionName("items", itemId)} : +${collectionConfig.defaultItemUses} utilisations`);
+    });
+  }
+
   private async ensureStarterCollection(): Promise<void> {
     let save = this.save.snapshot;
     const starterContent = [
@@ -554,7 +576,13 @@ export class GameApp {
       ["items", "item_stone"],
     ] as const;
     for (const [category, id] of starterContent) {
-      if (!save.inventory[category][id]) save = withCollectionItem(save, category, id);
+      if (category === "items") {
+        if (!Object.prototype.hasOwnProperty.call(save.inventory[category], id)) {
+          save = withCollectionUses(save, category, id, collectionConfig.defaultItemUses);
+        }
+      } else if (!save.inventory[category][id]) {
+        save = withCollectionItem(save, category, id);
+      }
     }
     if (save !== this.save.snapshot) {
       await this.save.saveCollection(save);
@@ -582,11 +610,11 @@ export class GameApp {
       build: () => ({
         launcherId: this.build.launcher.id,
         characterId: this.build.character.id,
-        itemId: this.build.item.id,
+        itemId: this.build.item?.id ?? null,
         upgrades: {
           launcher: this.save.upgrades.launchers.launcher_giant_slingshot ?? 0,
           character: this.save.upgrades.characters[this.build.character.id] ?? 0,
-          item: this.save.upgrades.items[this.build.item.id] ?? 0,
+          item: this.build.item ? this.save.upgrades.items[this.build.item.id] ?? 0 : 0,
         },
         resolved: this.build.resolved,
         characterMass: this.build.characterMass,
@@ -671,13 +699,13 @@ export class GameApp {
         id: item.id,
         name: item.displayName,
         count: this.save.inventory.items[item.id] ?? 0,
-        available: (this.save.inventory.items[item.id] ?? 0) > 0,
+        available: Object.prototype.hasOwnProperty.call(this.save.inventory.items, item.id),
         upgradeLevel: this.save.upgrades.items[item.id] ?? 0,
         stats: [
           `Masse x${item.massScale.toFixed(2)}`,
           `Lancement x${(item.launchImpulseScale * upgradeMultiplier(this.save.upgrades.items[item.id] ?? 0)).toFixed(2)}`,
           `Passif ${describePassive(item.passive)}`,
-          `Capacite ${item.ability ? `${item.ability.displayName} x${upgradeMultiplier(this.save.upgrades.items[item.id] ?? 0).toFixed(2)}` : "Aucune"}`,
+          `Utilisations ${this.save.inventory.items[item.id] ?? 0} | Capacite ${item.ability ? `${item.ability.displayName} x${upgradeMultiplier(this.save.upgrades.items[item.id] ?? 0).toFixed(2)}` : "Aucune"}`,
         ],
       })),
     ];
@@ -827,8 +855,9 @@ export class GameApp {
     this.hud.setBuild({
       launcherLabel: this.build.launcher.displayName,
       characterLabel: this.build.character.displayName,
-      itemLabel: this.build.item.displayName,
-      passivesLabel: `${describePassive(this.build.character.passive)} / ${describePassive(this.build.item.passive)}`,
+      itemLabel: this.build.item?.displayName ?? "Aucun objet",
+      itemUses: this.build.item ? this.save.inventory.items[this.build.item.id] ?? 0 : null,
+      passivesLabel: `${describePassive(this.build.character.passive)} / ${describePassive(this.build.item?.passive ?? null)}`,
     });
     this.refreshAbilityHud(isAiming);
     this.hud.setCheatEnabled(
@@ -873,29 +902,23 @@ export class GameApp {
       `Tirs restants : ${level.shots.shotsRemaining} / ${level.blockout.shotsAllowed}`,
       `Objets detruits : ${level.destruction.destroyedCount} / ${level.destruction.totalCount}`,
       `Secrets : ${level.secrets.discoveredCount} / ${level.secrets.totalCount}`,
+      level.shots.currentState === "Aiming"
+        ? `Angle ${level.aiming.getPitchDeg().toFixed(0)} deg - portee ${range.toFixed(0)} m`
+        : "Clic-glisser pour regarder autour, Espace pour terminer le tir.",
     ];
 
     if (level.shots.currentState === "Aiming" && aimTarget) {
-      const damageDone = aimTarget.totalStages - aimTarget.remainingStages;
-      const estimatedRemaining = Math.max(
-        0,
-        aimTarget.remainingStages - aimTarget.estimatedStagesLost,
-      );
-      const destroyImpact = requiredImpactForStages(
-        aimTarget.remainingStages,
-        aimTarget.impactThreshold,
-        aimTarget.damageScale,
-      );
+      const damageDone = aimTarget.maxHealth - aimTarget.currentHealth;
+      const healthPercent = Math.round((aimTarget.currentHealth / aimTarget.maxHealth) * 100);
+      const estimatedPercent = Math.round((aimTarget.estimatedHealth / aimTarget.maxHealth) * 100);
       lines.push(
         `Cible : ${aimTarget.displayName} (${damageStateLabel(aimTarget.state)})`,
-        `Resistance : ${aimTarget.remainingStages}/${aimTarget.totalStages} paliers`,
-        `Degats subis : ${damageDone} palier(s) perdu(s)`,
+        `Vie : ${aimTarget.currentHealth.toFixed(0)}/${aimTarget.maxHealth.toFixed(0)} N.s (${healthPercent}%)`,
+        `Degats subis : ${damageDone.toFixed(0)} N.s`,
         `Impact estime : ${aimTarget.estimatedImpact.toFixed(0)} N.s`,
-        `Ce tir : -${aimTarget.estimatedStagesLost} palier(s)`,
-        `Apres tir : ${estimatedRemaining}/${aimTarget.totalStages} restantes`,
-        `Destruction : ${aimTarget.totalStages} paliers de resistance`,
-        `1 palier = 1 niveau de resistance`,
-        `Seuil : ${aimTarget.impactThreshold.toFixed(0)} N.s | total : ${destroyImpact.toFixed(0)} N.s`,
+        `Degats appliques : ${aimTarget.estimatedDamage.toFixed(0)} N.s (apres seuil)`,
+        `Apres tir : vie prevue ${aimTarget.estimatedHealth.toFixed(0)} N.s (${estimatedPercent}%)`,
+        `Seuil impact : ${aimTarget.impactThreshold.toFixed(0)} N.s minimum`,
       );
     }
 
@@ -908,11 +931,6 @@ export class GameApp {
       lines.push(`Competences : ${bonuses.join(" - ")}`);
     }
 
-    lines.push(
-      level.shots.currentState === "Aiming"
-        ? `Angle ${level.aiming.getPitchDeg().toFixed(0)} deg - portee ${range.toFixed(0)} m`
-        : "Clic-glisser pour regarder autour, Espace pour terminer le tir.",
-    );
     return lines;
   }
 
@@ -937,12 +955,20 @@ export class GameApp {
     if (!level) {
       return;
     }
+    const equippedItemId = this.build.item?.id;
+    const ability = this.build.ability;
     if (level.shots.launch(level.aiming.getDirection(), level.aiming.power)) {
       level.destruction.beginShot();
       this.hud.clearImpact();
       const character = level.shots.activeCharacter;
       if (character) {
-        this.abilityController?.beginShot(this.build.ability, character);
+        this.abilityController?.beginShot(ability, character);
+      }
+      if (equippedItemId) {
+        void this.save.consumeItem(equippedItemId).then(() => {
+          this.build.applyCollectionOwnership(this.save.inventory);
+          this.refreshCollection();
+        });
       }
     }
   }

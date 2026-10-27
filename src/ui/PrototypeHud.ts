@@ -30,6 +30,7 @@ export interface PrototypeHudActions {
   readonly onActivateAbility: () => void;
   readonly onUpgradeSkill: (nodeId: string) => void;
   readonly onDrawCollection: (category: CollectionCategory) => void;
+  readonly onBuyItem: (id: string) => void;
   readonly onEquipCollection: (category: CollectionCategory, id: string) => void;
   readonly onSelectLevel: (index: number) => void;
   readonly onToggleCheat: () => void;
@@ -40,6 +41,7 @@ export interface BuildSummary {
   readonly launcherLabel: string;
   readonly characterLabel: string;
   readonly itemLabel: string;
+  readonly itemUses: number | null;
   readonly passivesLabel: string;
 }
 export type HudActionMode = "launch" | "end";
@@ -77,6 +79,9 @@ export class PrototypeHud {
 
   constructor(scene: Scene, actions: PrototypeHudActions) {
     this.texture = AdvancedDynamicTexture.CreateFullscreenUI("chaosUi", true, scene);
+    this.texture.idealWidth = 1280;
+    this.texture.idealHeight = 720;
+    this.texture.useSmallestIdeal = true;
 
     this.statusPanel = new Rectangle("statusPanel");
     this.statusPanel.width = "320px";
@@ -251,6 +256,7 @@ export class PrototypeHud {
     this.collectionPanel = new CollectionPanel(
       this.texture,
       actions.onDrawCollection,
+      actions.onBuyItem,
       actions.onEquipCollection,
       actions.onSelectLevel,
       () => this.collectionPanel.setVisible(false),
@@ -382,7 +388,10 @@ export class PrototypeHud {
 
   setBuild(summary: BuildSummary): void {
     setButtonLabel(this.characterButton, summary.characterLabel);
-    setButtonLabel(this.itemButton, summary.itemLabel);
+    setButtonLabel(
+      this.itemButton,
+      summary.itemUses === null ? summary.itemLabel : `${summary.itemLabel} (${summary.itemUses})`,
+    );
     this.passivesText.text = summary.passivesLabel;
     setButtonLabel(this.launcherButton, summary.launcherLabel);
   }

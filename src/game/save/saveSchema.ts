@@ -208,7 +208,35 @@ export function withCollectionItem(
   category: CollectionCategory,
   itemId: string,
 ): SaveData {
-  const collection = { ...save.inventory[category], [itemId]: (save.inventory[category][itemId] ?? 0) + 1 };
+  return withCollectionUses(save, category, itemId, 1);
+}
+
+export function withCollectionUses(
+  save: SaveData,
+  category: CollectionCategory,
+  itemId: string,
+  uses: number,
+): SaveData {
+  if (!Number.isFinite(uses) || uses <= 0) {
+    return save;
+  }
+  const collection = {
+    ...save.inventory[category],
+    [itemId]: (save.inventory[category][itemId] ?? 0) + Math.floor(uses),
+  };
+  return { ...save, inventory: { ...save.inventory, [category]: collection } };
+}
+
+export function withoutCollectionItem(
+  save: SaveData,
+  category: CollectionCategory,
+  itemId: string,
+): SaveData {
+  const current = save.inventory[category][itemId] ?? 0;
+  if (current <= 0) {
+    return save;
+  }
+  const collection = { ...save.inventory[category], [itemId]: current - 1 };
   return { ...save, inventory: { ...save.inventory, [category]: collection } };
 }
 

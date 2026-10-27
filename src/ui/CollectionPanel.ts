@@ -2,10 +2,12 @@ import {
   type AdvancedDynamicTexture,
   Button,
   Rectangle,
+  ScrollViewer,
   StackPanel,
   TextBlock,
 } from "@babylonjs/gui";
 import type { CollectionCategory } from "../game/save/saveSchema";
+import { collectionConfig } from "../data/config/collectionConfig";
 
 export interface CollectionLevelView {
   readonly index: number;
@@ -42,12 +44,14 @@ export class CollectionPanel {
   private readonly progressionText: TextBlock;
   private readonly messageText: TextBlock;
   private readonly list: StackPanel;
+  private readonly listScroll: ScrollViewer;
   private readonly drawButtons: Partial<Record<CollectionCategory, Button>> = {};
   private selectedCategory: CollectionCategory | "levels" = "characters";
 
   constructor(
     texture: AdvancedDynamicTexture,
     private readonly onDraw: (category: CollectionCategory) => void,
+    private readonly onBuyItem: (id: string) => void,
     private readonly onEquip: (category: CollectionCategory, id: string) => void,
     private readonly onSelectLevel: (index: number) => void,
     onClose: () => void,
@@ -120,9 +124,16 @@ export class CollectionPanel {
 
     this.messageText = createText("collectionMessage", "", 17, "#ffd24a", "44px");
     layout.addControl(this.messageText);
+    this.listScroll = new ScrollViewer("collectionScroll");
+    this.listScroll.width = "580px";
+    this.listScroll.height = "350px";
+    this.listScroll.thickness = 0;
+    this.listScroll.barSize = 12;
+    this.listScroll.background = "#0b1421aa";
+    layout.addControl(this.listScroll);
     this.list = new StackPanel("collectionList");
-    this.list.height = "350px";
-    layout.addControl(this.list);
+    this.list.width = "560px";
+    this.listScroll.addControl(this.list);
 
     const close = Button.CreateSimpleButton("collectionClose", "Fermer");
     close.width = "180px";
@@ -198,7 +209,7 @@ export class CollectionPanel {
       const ownership = entry.available ? `${entry.count} exemplaire(s)` : "Indisponible";
       const upgrade = entry.upgradeLevel > 0 ? ` | amelioration ${entry.upgradeLevel}` : "";
       const row = new StackPanel(`collectionEntry_${entry.category}_${entry.id}`);
-      row.height = "82px";
+      row.height = entry.category === "items" ? "112px" : "82px";
       const details = createText(
         `collectionDetails_${entry.category}_${entry.id}`,
         `${entry.name} - ${ownership}${upgrade}\n${entry.stats.join(" | ")}`,
@@ -208,19 +219,36 @@ export class CollectionPanel {
       );
       row.addControl(details);
       if (entry.available) {
-        const equip = Button.CreateSimpleButton(
-          `equip_${entry.category}_${entry.id}`,
-          "Equiper",
-        );
-        equip.width = "140px";
-        equip.height = "26px";
-        equip.color = "#ffffff";
-        equip.background = "#3f8f6b";
-        equip.cornerRadius = 6;
-        equip.thickness = 0;
-        equip.fontSize = 14;
-        equip.onPointerClickObservable.add(() => this.onEquip(entry.category, entry.id));
-        row.addControl(equip);
+        if (entry.category === "items") {
+          const buy = Button.CreateSimpleButton(
+            `buy_${entry.category}_${entry.id}`,
+            `Acheter +${collectionConfig.defaultItemUses} - cout : ${collectionConfig.itemPurchaseCost}€`,
+          );
+          buy.width = "220px";
+          buy.height = "26px";
+          buy.color = "#ffffff";
+          buy.background = "#d28a2e";
+          buy.cornerRadius = 6;
+          buy.thickness = 0;
+          buy.fontSize = 14;
+          buy.onPointerClickObservable.add(() => this.onBuyItem(entry.id));
+          row.addControl(buy);
+        }
+        if (entry.count > 0 || entry.category !== "items") {
+          const equip = Button.CreateSimpleButton(
+            `equip_${entry.category}_${entry.id}`,
+            "Equiper",
+          );
+          equip.width = "140px";
+          equip.height = "26px";
+          equip.color = "#ffffff";
+          equip.background = "#3f8f6b";
+          equip.cornerRadius = 6;
+          equip.thickness = 0;
+          equip.fontSize = 14;
+          equip.onPointerClickObservable.add(() => this.onEquip(entry.category, entry.id));
+          row.addControl(equip);
+        }
       }
       this.list.addControl(row);
     }

@@ -6,6 +6,12 @@ export interface ImpactOutcome {
   readonly stagesLost: number;
   readonly nextStage: number;
   readonly destroyed: boolean;
+  readonly damageApplied: number;
+  readonly nextHealth: number;
+}
+
+export function maxHealthForDefinition(definition: DestructibleDefinition): number {
+  return definition.maxHealth;
 }
 
 /**
@@ -14,18 +20,35 @@ export interface ImpactOutcome {
  */
 export function resolveImpact(
   intensity: number,
-  currentStage: number,
+  currentHealth: number,
   definition: DestructibleDefinition,
 ): ImpactOutcome {
-  if (currentStage <= 0 || intensity < definition.minimumImpactThreshold) {
-    return { qualifies: false, stagesLost: 0, nextStage: currentStage, destroyed: false };
+  if (currentHealth <= 0 || intensity < definition.minimumImpactThreshold) {
+    return {
+      qualifies: false,
+      stagesLost: 0,
+      nextStage: Math.ceil(Math.max(0, currentHealth) / (definition.maxHealth / definition.stages)),
+      destroyed: false,
+      damageApplied: 0,
+      nextHealth: Math.max(0, currentHealth),
+    };
   }
 
-  const excess = intensity - definition.minimumImpactThreshold;
-  const stagesLost = Math.min(currentStage, 1 + Math.floor(excess * definition.damageScale));
-  const nextStage = currentStage - stagesLost;
+  const maxHealth = maxHealthForDefinition(definition);
+  const nextHealth = Math.max(0, Math.min(maxHealth, currentHealth - intensity));
+  const stagesLost = Math.min(
+    Math.ceil(currentHealth / (definition.maxHealth / definition.stages)),
+    Math.max(1, Math.floor((currentHealth - nextHealth) / (definition.maxHealth / definition.stages))),
+  );
 
-  return { qualifies: true, stagesLost, nextStage, destroyed: nextStage === 0 };
+  return {
+    qualifies: true,
+    stagesLost,
+    nextStage: Math.ceil(nextHealth / (definition.maxHealth / definition.stages)),
+    destroyed: nextHealth === 0,
+    damageApplied: currentHealth - nextHealth,
+    nextHealth,
+  };
 }
 
 /** Impact necessaire pour retirer un nombre donne d'etapes restantes. */
@@ -52,4 +75,12 @@ export function stateForStage(stage: number, totalStages: number): DestructibleS
     return "Intact";
   }
   return stage / totalStages <= 0.34 ? "Critical" : "Damaged";
+}
+
+export function stateForHealth(health: number, maxHealth: number): DestructibleState {
+  if (health <= 0) return "Destroyed";
+  const ratio = health / maxHealth;
+  if (ratio >= 1) return "Intact";
+  if (ratio >= 0.66) return "Damaged";
+  return "Critical";
 }

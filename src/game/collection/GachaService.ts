@@ -6,6 +6,7 @@ import {
   type CollectionCategory,
   type SaveData,
   withCollectionItem,
+  withCollectionUses,
   withCurrency,
   withUpgradeLevel,
 } from "../save/saveSchema";
@@ -36,11 +37,13 @@ export class GachaService {
       return null;
     }
 
-    const duplicate = (save.inventory[category][itemId] ?? 0) > 0;
+    const duplicate = Object.prototype.hasOwnProperty.call(save.inventory[category], itemId);
     const currentUpgrade = save.upgrades[category][itemId] ?? 0;
     const maxed = currentUpgrade >= collectionConfig.maxDuplicateUpgradeLevel;
     let updated = withCurrency(save, -collectionConfig.gachaCost);
-    updated = withCollectionItem(updated, category, itemId);
+    updated = category === "items"
+      ? withCollectionUses(updated, category, itemId, collectionConfig.defaultItemUses)
+      : withCollectionItem(updated, category, itemId);
     if (duplicate && !maxed) {
       updated = withUpgradeLevel(
         updated,

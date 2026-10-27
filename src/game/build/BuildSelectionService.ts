@@ -16,7 +16,7 @@ import { resolveBuild, type ResolvedBuild } from "./buildMath";
  */
 export class BuildSelectionService {
   private characterIndex = 0;
-  private itemIndex = 0;
+  private itemIndex: number | null = 0;
   private launcherIndex = 0;
   private launchPowerBonus = 0;
   private bounceBonus = 0;
@@ -70,16 +70,26 @@ export class BuildSelectionService {
     return characterCatalog[this.characterIndex] as CharacterDefinition;
   }
 
-  get item(): ItemDefinition {
-    return itemCatalog[this.itemIndex] as ItemDefinition;
+  get item(): ItemDefinition | null {
+    return this.itemIndex === null ? null : itemCatalog[this.itemIndex] ?? null;
   }
 
   get resolved(): ResolvedBuild {
-    const base = resolveBuild(this.character, this.item);
+    const base = this.item
+      ? resolveBuild(this.character, this.item)
+      : {
+          massScale: this.character.massScale,
+          restitution: this.character.restitution,
+          friction: this.character.friction,
+          launchImpulseScale: 1,
+          scoreMultiplier: 1,
+        };
     const characterUpgrade = upgradeMultiplier(
       this.collectionUpgrades.characters[this.character.id] ?? 0,
     );
-    const itemUpgrade = upgradeMultiplier(this.collectionUpgrades.items[this.item.id] ?? 0);
+    const itemUpgrade = this.item
+      ? upgradeMultiplier(this.collectionUpgrades.items[this.item.id] ?? 0)
+      : 1;
     return {
       ...base,
       restitution: Math.min(0.9, base.restitution * characterUpgrade + this.bounceBonus),
@@ -89,6 +99,9 @@ export class BuildSelectionService {
   }
 
   get ability(): ActiveAbility | null {
+    if (!this.item) {
+      return null;
+    }
     const ability = this.item.ability;
     if (!ability) {
       return null;
@@ -118,7 +131,15 @@ export class BuildSelectionService {
   }
 
   cycleItem(): void {
-    this.itemIndex = nextOwnedIndex(this.itemIndex, itemCatalog.map((entry) => entry.id), this.owned.items);
+    if (this.itemIndex === null) {
+      this.itemIndex = firstOwnedIndex(itemCatalog.map((entry) => entry.id), this.owned.items);
+      return;
+    }
+    this.itemIndex = nextOwnedIndexOrNone(
+      this.itemIndex,
+      itemCatalog.map((entry) => entry.id),
+      this.owned.items,
+    );
   }
 
   cycleLauncher(): void {
@@ -150,7 +171,9 @@ export class BuildSelectionService {
   private ensureOwnedSelection(): void {
     this.launcherIndex = ownedIndexOrFirst(this.launcherIndex, launcherCatalog.map((entry) => entry.id), this.owned.launchers);
     this.characterIndex = ownedIndexOrFirst(this.characterIndex, characterCatalog.map((entry) => entry.id), this.owned.characters);
-    this.itemIndex = ownedIndexOrFirst(this.itemIndex, itemCatalog.map((entry) => entry.id), this.owned.items);
+    if (this.itemIndex !== null && (this.owned.items[itemCatalog[this.itemIndex]?.id ?? ""] ?? 0) <= 0) {
+      this.itemIndex = null;
+    }
   }
 }
 
@@ -168,6 +191,25 @@ function nextOwnedIndex(
     if ((owned[ids[index] ?? ""] ?? 0) > 0) return index;
   }
   return currentIndex;
+}
+
+function nextOwnedIndexOrNone(
+  currentIndex: number,
+  ids: readonly string[],
+  owned: Readonly<Record<string, number>>,
+): number | null {
+  for (let index = currentIndex + 1; index < ids.length; index += 1) {
+    if ((owned[ids[index] ?? ""] ?? 0) > 0) return index;
+  }
+  return null;
+}
+
+function firstOwnedIndex(
+  ids: readonly string[],
+  owned: Readonly<Record<string, number>>,
+): number | null {
+  const index = ids.findIndex((id) => (owned[id] ?? 0) > 0);
+  return index < 0 ? null : index;
 }
 
 function ownedIndexOrFirst(

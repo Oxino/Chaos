@@ -11,7 +11,7 @@ import { explosionFalloff } from "../ability/explosionMath";
 import type { DebrisBudget } from "./DebrisBudget";
 import type { DestructibleBuilding } from "./DestructibleBuilding";
 import type { DestructibleObject, DestructionResult } from "./DestructibleObject";
-import { resolveImpact } from "./impactMath";
+import { maxHealthForDefinition, resolveImpact } from "./impactMath";
 
 export type DestructionListener = (result: DestructionResult) => void;
 
@@ -35,6 +35,10 @@ export interface AimTargetInfo {
   readonly damageScale: number;
   readonly estimatedImpact: number;
   readonly estimatedStagesLost: number;
+  readonly currentHealth: number;
+  readonly maxHealth: number;
+  readonly estimatedDamage: number;
+  readonly estimatedHealth: number;
 }
 
 export type ImpactListener = (report: ImpactReport) => void;
@@ -122,20 +126,33 @@ export class DestructionService {
     if (!destructible) {
       return null;
     }
+    const effectiveEstimatedImpact = estimatedImpact * this.impactMultiplier;
     return {
       id: destructible.id,
       displayName: destructible.definition.displayName,
       state: destructible.state,
       impactThreshold: destructible.definition.minimumImpactThreshold,
       damageScale: destructible.definition.damageScale,
-      estimatedImpact,
+      estimatedImpact: effectiveEstimatedImpact,
       estimatedStagesLost: resolveImpact(
-        estimatedImpact,
-        destructible.currentStage,
+        effectiveEstimatedImpact,
+        destructible.currentHealth,
         destructible.definition,
       ).stagesLost,
       remainingStages: Math.max(0, destructible.currentStage),
       totalStages: destructible.definition.stages,
+      currentHealth: destructible.currentHealth,
+      maxHealth: maxHealthForDefinition(destructible.definition),
+      estimatedDamage: resolveImpact(
+        effectiveEstimatedImpact,
+        destructible.currentHealth,
+        destructible.definition,
+      ).damageApplied,
+      estimatedHealth: resolveImpact(
+        effectiveEstimatedImpact,
+        destructible.currentHealth,
+        destructible.definition,
+      ).nextHealth,
     };
   }
 

@@ -6,6 +6,7 @@ import {
   migrateSave,
   withBestScore,
   withCompletedQuests,
+  withoutCollectionItem,
   withXp,
 } from "./saveSchema";
 
@@ -79,6 +80,18 @@ describe("withXp", () => {
     const save = createEmptySave();
     expect(withXp(save, 0)).toBe(save);
     expect(withXp(save, -10)).toBe(save);
+  });
+});
+
+describe("withoutCollectionItem", () => {
+  it("consomme un exemplaire sans descendre sous zero", () => {
+    const save = {
+      ...createEmptySave(),
+      inventory: { launchers: {}, characters: {}, items: { item_stone: 1 } },
+    };
+    const consumed = withoutCollectionItem(save, "items", "item_stone");
+    expect(consumed.inventory.items.item_stone).toBe(0);
+    expect(withoutCollectionItem(consumed, "items", "item_stone")).toBe(consumed);
   });
 });
 

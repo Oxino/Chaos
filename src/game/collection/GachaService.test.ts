@@ -16,7 +16,7 @@ describe("GachaService", () => {
     expect(reward?.itemId).toBe("item_stone");
     expect(reward?.duplicate).toBe(false);
     expect(reward?.currencyRemaining).toBe(0);
-    expect(reward?.save.inventory.items.item_stone).toBe(1);
+    expect(reward?.save.inventory.items.item_stone).toBe(collectionConfig.defaultItemUses);
     expect(reward?.upgradeLevel).toBe(0);
   });
 
