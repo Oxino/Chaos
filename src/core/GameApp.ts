@@ -887,10 +887,15 @@ export class GameApp {
         aimTarget.damageScale,
       );
       lines.push(
-        `Cible : ${aimTarget.displayName} - ${damageStateLabel(aimTarget.state)}`,
-        `Degats : ${damageDone}/${aimTarget.totalStages} etapes | impact estime ${aimTarget.estimatedImpact.toFixed(0)} N.s`,
-        `Tir : -${aimTarget.estimatedStagesLost} etape(s), restant ${estimatedRemaining}/${aimTarget.totalStages}`,
-        `Seuil : ${aimTarget.impactThreshold.toFixed(0)} N.s | destruction a ${destroyImpact.toFixed(0)} N.s`,
+        `Cible : ${aimTarget.displayName} (${damageStateLabel(aimTarget.state)})`,
+        `Resistance : ${aimTarget.remainingStages}/${aimTarget.totalStages} paliers`,
+        `Degats subis : ${damageDone} palier(s) perdu(s)`,
+        `Impact estime : ${aimTarget.estimatedImpact.toFixed(0)} N.s`,
+        `Ce tir : -${aimTarget.estimatedStagesLost} palier(s)`,
+        `Apres tir : ${estimatedRemaining}/${aimTarget.totalStages} restantes`,
+        `Destruction : ${aimTarget.totalStages} paliers de resistance`,
+        `1 palier = 1 niveau de resistance`,
+        `Seuil : ${aimTarget.impactThreshold.toFixed(0)} N.s | total : ${destroyImpact.toFixed(0)} N.s`,
       );
     }
 

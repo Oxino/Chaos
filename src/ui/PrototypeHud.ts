@@ -53,6 +53,7 @@ export class PrototypeHud {
   private readonly scoreText: TextBlock;
   private readonly questPanel: Rectangle;
   private readonly questText: TextBlock;
+  private readonly buildCard: Rectangle;
   private readonly powerLabel: TextBlock;
   private readonly powerSlider: Slider;
   private readonly actionButton: Button;
@@ -93,12 +94,13 @@ export class PrototypeHud {
 
     this.statusText = new TextBlock("statusText");
     this.statusText.color = "#ffffff";
-    this.statusText.fontSize = 18;
+    this.statusText.fontSize = 15;
     this.statusText.fontWeight = "bold";
     this.statusText.outlineColor = "#122033";
     this.statusText.outlineWidth = 5;
     this.statusText.width = "300px";
     this.statusText.height = "270px";
+    this.statusText.textWrapping = true;
     this.statusText.left = "28px";
     this.statusText.top = "24px";
     this.statusText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
@@ -135,25 +137,26 @@ export class PrototypeHud {
 
     this.questPanel = new Rectangle("questPanel");
     this.questPanel.width = "300px";
-    this.questPanel.height = "132px";
+    this.questPanel.height = "116px";
     this.questPanel.thickness = 2;
     this.questPanel.color = "#8db6ce";
     this.questPanel.cornerRadius = 6;
     this.questPanel.background = "#13243bd9";
-    this.questPanel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+    this.questPanel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
     this.questPanel.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-    this.questPanel.top = "220px";
+    this.questPanel.top = "160px";
+    this.questPanel.paddingRight = "16px";
     this.questPanel.isPointerBlocker = false;
     this.texture.addControl(this.questPanel);
 
     this.questText = new TextBlock("questText");
     this.questText.color = "#ffffff";
-    this.questText.fontSize = 15;
+    this.questText.fontSize = 14;
     this.questText.fontWeight = "bold";
     this.questText.outlineColor = "#122033";
     this.questText.outlineWidth = 3;
     this.questText.width = "280px";
-    this.questText.height = "120px";
+    this.questText.height = "104px";
     this.questText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
     this.questText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
     this.questPanel.addControl(this.questText);
@@ -287,14 +290,32 @@ export class PrototypeHud {
     this.cheatButton.isVisible = false;
     this.texture.addControl(this.cheatButton);
 
+    this.buildCard = new Rectangle("buildCard");
+    this.buildCard.width = "250px";
+    this.buildCard.height = "270px";
+    this.buildCard.thickness = 2;
+    this.buildCard.color = "#8db6ce";
+    this.buildCard.cornerRadius = 6;
+    this.buildCard.background = "#13243bd9";
+    this.buildCard.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+    this.buildCard.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+    this.buildCard.paddingLeft = "16px";
+    this.buildCard.paddingBottom = "16px";
+    this.texture.addControl(this.buildCard);
+
     this.buildPanel = new StackPanel("buildPanel");
     this.buildPanel.width = "250px";
     this.buildPanel.height = "250px";
-    this.buildPanel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-    this.buildPanel.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-    this.buildPanel.paddingLeft = "16px";
-    this.buildPanel.paddingBottom = "24px";
-    this.texture.addControl(this.buildPanel);
+    this.buildCard.addControl(this.buildPanel);
+
+    const buildTitle = new TextBlock("buildTitle", "BUILD DU TIR");
+    buildTitle.height = "28px";
+    buildTitle.color = "#ffcb2f";
+    buildTitle.fontSize = 17;
+    buildTitle.fontWeight = "bold";
+    buildTitle.outlineColor = "#122033";
+    buildTitle.outlineWidth = 3;
+    this.buildPanel.addControl(buildTitle);
 
     this.characterButton = this.createButton(
       "characterButton",
@@ -305,6 +326,8 @@ export class PrototypeHud {
     this.itemButton = this.createButton("itemButton", "Objet", "#315c78", actions.onCycleItem);
     this.characterButton.width = "220px";
     this.itemButton.width = "220px";
+    this.characterButton.height = "50px";
+    this.itemButton.height = "50px";
     this.characterButton.paddingBottom = "8px";
     this.itemButton.paddingBottom = "8px";
     this.buildPanel.addControl(this.characterButton);
@@ -333,6 +356,7 @@ export class PrototypeHud {
     this.texture.addControl(this.abilityButton);
     this.launcherButton = this.createButton("launcherButton", "Lanceur", "#315c78", actions.onCycleLauncher);
     this.launcherButton.width = "220px";
+    this.launcherButton.height = "50px";
     this.launcherButton.paddingBottom = "8px";
     this.buildPanel.addControl(this.launcherButton);
   }
@@ -451,7 +475,9 @@ export class PrototypeHud {
   setStatus(message: string): void {
     this.statusText.text = message;
     const lineCount = message.split("\n").length;
-    this.statusPanel.height = `${Math.max(190, lineCount * 25 + 20)}px`;
+    const height = Math.max(190, lineCount * 19 + 20);
+    this.statusPanel.height = `${height}px`;
+    this.statusText.height = `${height - 20}px`;
   }
 
   setScore(score: number, target: number): void {
@@ -462,7 +488,11 @@ export class PrototypeHud {
     this.questText.text = [
       "QUETES",
       ...statuses.slice(0, 3).map((status) => {
-        const marker = status.completed ? "OK" : "-";
+        const marker = status.completed
+          ? status.current >= status.definition.targetValue
+            ? "OK"
+            : "FAIT"
+          : "-";
         return `${marker} ${status.definition.name} ${status.current}/${status.definition.targetValue}`;
       }),
     ].join("\n");
