@@ -41,25 +41,29 @@ export class ResultsPanel {
 
   constructor(texture: AdvancedDynamicTexture, onReplay: () => void, onNextLevel: () => void) {
     this.panel = new Rectangle("resultsPanel");
-    this.panel.width = "500px";
-    this.panel.height = "580px";
-    this.panel.thickness = 0;
-    this.panel.cornerRadius = 16;
-    this.panel.background = "#10131aee";
+    this.panel.width = "540px";
+    this.panel.height = "600px";
+    this.panel.thickness = 3;
+    this.panel.color = "#ffcb2f";
+    this.panel.cornerRadius = 8;
+    this.panel.background = "#13243beF";
     this.panel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
     this.panel.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
     this.panel.isVisible = false;
     texture.addControl(this.panel);
 
     this.stack = new StackPanel("resultsStack");
-    this.stack.paddingTop = "24px";
+    this.stack.paddingTop = "20px";
     this.panel.addControl(this.stack);
 
-    this.title = createLine(26, "#ffd24a");
+    this.title = createLine(34, "#ffcb2f");
+    this.title.fontWeight = "bold";
+    this.title.outlineColor = "#111e30";
+    this.title.outlineWidth = 4;
     this.stack.addControl(this.title);
 
     for (let index = 0; index < 12; index += 1) {
-      const line = createLine(19, "#f2f4f8");
+      const line = createLine(18, "#f4f8ff");
       this.lines.push(line);
       this.stack.addControl(line);
     }
@@ -68,7 +72,7 @@ export class ResultsPanel {
     const questLine = this.lines[11];
     if (questLine) {
       questLine.textWrapping = true;
-      questLine.width = "440px";
+      questLine.width = "480px";
       questLine.height = "64px";
     }
 
@@ -77,10 +81,11 @@ export class ResultsPanel {
     replay.height = "56px";
     replay.paddingTop = "20px";
     replay.color = "#ffffff";
-    replay.background = "#e8613c";
-    replay.cornerRadius = 10;
-    replay.thickness = 0;
-    replay.fontSize = 20;
+    replay.background = "#ffbd19";
+    replay.cornerRadius = 6;
+    replay.thickness = 2;
+    replay.fontSize = 19;
+    replay.fontWeight = "bold";
     replay.onPointerClickObservable.add(() => onReplay());
     this.stack.addControl(replay);
 
@@ -89,10 +94,11 @@ export class ResultsPanel {
     this.nextLevelButton.height = "56px";
     this.nextLevelButton.paddingTop = "10px";
     this.nextLevelButton.color = "#ffffff";
-    this.nextLevelButton.background = "#3f8f6b";
-    this.nextLevelButton.cornerRadius = 10;
-    this.nextLevelButton.thickness = 0;
-    this.nextLevelButton.fontSize = 20;
+    this.nextLevelButton.background = "#2f8a65";
+    this.nextLevelButton.cornerRadius = 6;
+    this.nextLevelButton.thickness = 2;
+    this.nextLevelButton.fontSize = 19;
+    this.nextLevelButton.fontWeight = "bold";
     this.nextLevelButton.onPointerClickObservable.add(() => onNextLevel());
     this.stack.addControl(this.nextLevelButton);
   }

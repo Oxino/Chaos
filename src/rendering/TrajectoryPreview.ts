@@ -30,6 +30,7 @@ const RETICLE_SURFACE_OFFSET = 0.1;
 export class TrajectoryPreview {
   private lines: LinesMesh;
   private readonly reticle: Mesh;
+  private readonly reticleDot: Mesh;
   private readonly reticleMaterial: StandardMaterial;
 
   constructor(private readonly scene: Scene) {
@@ -52,11 +53,19 @@ export class TrajectoryPreview {
 
     this.reticle = MeshBuilder.CreateTorus(
       "reticle",
-      { diameter: aimConfig.reticleDiameter, thickness: 0.45, tessellation: 32 },
+      { diameter: aimConfig.reticleDiameter, thickness: 0.12, tessellation: 32 },
       scene,
     );
     this.reticle.material = this.reticleMaterial;
     this.reticle.isPickable = false;
+
+    this.reticleDot = MeshBuilder.CreateSphere(
+      "reticleDot",
+      { diameter: 0.22, segments: 12 },
+      scene,
+    );
+    this.reticleDot.material = this.reticleMaterial;
+    this.reticleDot.isPickable = false;
   }
 
   setTarget(target: AimTargetInfo | null): void {
@@ -79,11 +88,14 @@ export class TrajectoryPreview {
     this.reticle.position = toVector3(trajectory.impact).add(
       normal.scale(RETICLE_SURFACE_OFFSET),
     );
+    this.reticleDot.rotationQuaternion = this.reticle.rotationQuaternion;
+    this.reticleDot.position.copyFrom(this.reticle.position);
   }
 
   setVisible(visible: boolean): void {
     this.lines.setEnabled(visible);
     this.reticle.setEnabled(visible);
+    this.reticleDot.setEnabled(visible);
   }
 }
 

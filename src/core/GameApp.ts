@@ -234,11 +234,13 @@ export class GameApp {
   private createLighting(): void {
     const ambient = new HemisphericLight("ambientLight", new Vector3(0.2, 1, -0.3), this.scene);
     ambient.intensity = 0.75;
-    ambient.groundColor = Color3.FromHexString("#6b7589");
+    ambient.diffuse = Color3.FromHexString("#d9edff");
+    ambient.groundColor = Color3.FromHexString("#4d6680");
     this.ambientLight = ambient;
 
     const sun = new DirectionalLight("sunLight", new Vector3(-0.35, -1, 0.5), this.scene);
     sun.intensity = 1.1;
+    sun.diffuse = Color3.FromHexString("#fff0c7");
     this.sunLight = sun;
   }
 
@@ -283,7 +285,10 @@ export class GameApp {
     };
 
     destruction.onImpact((report) => this.hud.showImpact(report));
-    destruction.onDestruction((result) => this.awardDestruction(result));
+    destruction.onDestruction((result) => {
+      this.abilityEffects.triggerDestructionBurst(result.position);
+      this.awardDestruction(result);
+    });
 
     this.applySkillBonuses();
     this.restartSession();
@@ -298,14 +303,31 @@ export class GameApp {
     const fog = this.ambience.weather === "fog";
     const rain = this.ambience.weather === "rain";
     this.clearAmbienceMeshes();
-    this.scene.clearColor = Color4.FromHexString(
-      night ? "#101522ff" : dusk ? "#342d3dff" : fog ? "#4d5660ff" : "#10131aff",
-    );
+    this.scene.clearColor = Color4.FromHexString(night
+      ? "#142239ff"
+      : dusk
+        ? "#b36f72ff"
+        : fog
+          ? "#91a7adff"
+          : rain
+            ? "#55728fff"
+            : "#78b8e3ff");
     this.scene.fogMode = fog ? Scene.FOGMODE_EXP2 : Scene.FOGMODE_NONE;
-    this.scene.fogColor = Color3.FromHexString(fog ? "#6c747b" : "#10131a");
+    this.scene.fogColor = Color3.FromHexString(fog ? "#9baeb0" : "#78b8e3");
     this.scene.fogDensity = fog ? 0.008 : 0;
     this.ambientLight.intensity = night ? 0.42 : fog ? 0.62 : 0.75;
     this.sunLight.intensity = night ? 0.25 : rain ? 0.7 : dusk ? 0.8 : 1.1;
+    this.ambientLight.diffuse = Color3.FromHexString(
+      night ? "#8ab2e2" : dusk ? "#ffc49a" : fog ? "#d8e6e5" : "#d9edff",
+    );
+    this.ambientLight.groundColor = Color3.FromHexString(
+      night ? "#253a58" : dusk ? "#70505e" : fog ? "#60777c" : "#4d6680",
+    );
+    this.sunLight.diffuse = Color3.FromHexString(
+      night ? "#9ec6ff" : dusk ? "#ffb169" : rain ? "#c2d4eb" : "#fff0c7",
+    );
+    this.scene.imageProcessingConfiguration.contrast = night ? 1.2 : fog ? 0.95 : 1.1;
+    this.scene.imageProcessingConfiguration.exposure = night ? 0.88 : dusk ? 1.04 : 1;
     if (rain) {
       this.createRainVisual();
     }
@@ -814,6 +836,8 @@ export class GameApp {
       !isAiming && this.sessionMode === "cheat" && level.shots.canEndManually,
     );
     this.hud.setSkillButtonLabel(this.skills.availablePoints);
+    this.hud.setScore(this.score.total, level.blockout.targetScore);
+    this.hud.setQuests(this.quests.statuses);
     if (this.hud.skillPanelOpen) {
       this.hud.renderSkills(
         this.skills.statuses,

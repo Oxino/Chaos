@@ -171,6 +171,9 @@ export class CharacterSpawner {
       origin.z + definition.offset.z,
     );
     mesh.material = this.materialFor(profile.tint ?? definition.color);
+    if (definition.id === "head") {
+      addFaceDetails(this.scene, mesh, profile.tint, this.materialFor("#172333"));
+    }
 
     const mass = definition.mass * profile.massScale;
     const aggregate = new PhysicsAggregate(
@@ -193,6 +196,46 @@ export class CharacterSpawner {
     material.specularColor = Color3.Black();
     this.materials.set(color, material);
     return material;
+  }
+}
+
+/** Details sans physique, enfants de la tete pour suivre le ragdoll a chaque articulation. */
+function addFaceDetails(
+  scene: Scene,
+  head: Mesh,
+  tint: string | null,
+  faceMaterial: StandardMaterial,
+): void {
+  for (const x of [-0.07, 0.07]) {
+    const eye = MeshBuilder.CreateSphere(`eye_${head.name}_${x}`, { diameter: 0.065, segments: 8 }, scene);
+    eye.parent = head;
+    eye.position.set(x, 0.035, -0.155);
+    eye.material = faceMaterial;
+    eye.isPickable = false;
+  }
+
+  const mouth = MeshBuilder.CreateSphere(`mouth_${head.name}`, { diameter: 0.07, segments: 8 }, scene);
+  mouth.parent = head;
+  mouth.position.set(0, -0.07, -0.158);
+  mouth.scaling.set(1.65, 0.55, 0.35);
+  mouth.material = faceMaterial;
+  mouth.isPickable = false;
+
+  if (tint !== "#d9b28c") {
+    return;
+  }
+  for (const x of [-0.1, 0.1]) {
+    const ear = MeshBuilder.CreateCylinder(`catEar_${head.name}_${x}`, {
+      height: 0.13,
+      diameterTop: 0,
+      diameterBottom: 0.1,
+      tessellation: 3,
+    }, scene);
+    ear.parent = head;
+    ear.position.set(x, 0.18, 0);
+    ear.rotation.z = x * -2.4;
+    ear.material = head.material;
+    ear.isPickable = false;
   }
 }
 

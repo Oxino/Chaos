@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { destructibleCatalog } from "../../data/content/destructibles/destructibleCatalog";
 import type { DestructibleDefinition } from "../../data/content/destructibles/destructibleTypes";
 import { requiredImpactForStages, resolveImpact, stateForStage } from "./impactMath";
 
@@ -29,6 +30,23 @@ describe("resolveImpact", () => {
     expect(outcome.qualifies).toBe(true);
     expect(outcome.destroyed).toBe(true);
     expect(outcome.nextStage).toBe(0);
+  });
+
+  it("conserve une etape de degats sur une voiture a 150 N.s", () => {
+    const configuredCar = destructibleCatalog.car;
+    expect(configuredCar).toBeDefined();
+    if (!configuredCar) {
+      throw new Error("Configuration de voiture introuvable");
+    }
+    const outcome = resolveImpact(
+      150,
+      configuredCar.stages,
+      configuredCar,
+    );
+
+    expect(outcome.qualifies).toBe(true);
+    expect(outcome.stagesLost).toBe(1);
+    expect(outcome.nextStage).toBe(2);
   });
 
   it("n'enleve qu'une etape pour un impact juste au-dessus du seuil", () => {

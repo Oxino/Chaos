@@ -3,6 +3,7 @@ import {
   AdvancedDynamicTexture,
   Button,
   Control,
+  Rectangle,
   Slider,
   StackPanel,
   TextBlock,
@@ -15,6 +16,7 @@ import { SkillPanel } from "./SkillPanel";
 import type { SkillNodeStatus } from "../game/skill/SkillTreeService";
 import { CollectionPanel, type CollectionProfileView } from "./CollectionPanel";
 import type { CollectionCategory } from "../game/save/saveSchema";
+import type { QuestStatus } from "../game/quest/questMath";
 
 export interface PrototypeHudActions {
   readonly onLaunch: () => void;
@@ -45,7 +47,12 @@ export type HudActionMode = "launch" | "end";
 /** HUD provisoire de la Phase 1. Textes joueur en francais (spec 15.6). */
 export class PrototypeHud {
   private readonly texture: AdvancedDynamicTexture;
+  private readonly statusPanel: Rectangle;
   private readonly statusText: TextBlock;
+  private readonly scorePanel: Rectangle;
+  private readonly scoreText: TextBlock;
+  private readonly questPanel: Rectangle;
+  private readonly questText: TextBlock;
   private readonly powerLabel: TextBlock;
   private readonly powerSlider: Slider;
   private readonly actionButton: Button;
@@ -70,34 +77,102 @@ export class PrototypeHud {
   constructor(scene: Scene, actions: PrototypeHudActions) {
     this.texture = AdvancedDynamicTexture.CreateFullscreenUI("chaosUi", true, scene);
 
+    this.statusPanel = new Rectangle("statusPanel");
+    this.statusPanel.width = "320px";
+    this.statusPanel.height = "190px";
+    this.statusPanel.thickness = 2;
+    this.statusPanel.color = "#8db6ce";
+    this.statusPanel.cornerRadius = 6;
+    this.statusPanel.background = "#13243bd9";
+    this.statusPanel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+    this.statusPanel.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    this.statusPanel.left = "16px";
+    this.statusPanel.top = "16px";
+    this.statusPanel.isPointerBlocker = false;
+    this.texture.addControl(this.statusPanel);
+
     this.statusText = new TextBlock("statusText");
-    this.statusText.color = "#f2f4f8";
-    this.statusText.fontSize = 20;
-    this.statusText.outlineColor = "#10131a";
-    this.statusText.outlineWidth = 4;
-    this.statusText.width = "640px";
+    this.statusText.color = "#ffffff";
+    this.statusText.fontSize = 18;
+    this.statusText.fontWeight = "bold";
+    this.statusText.outlineColor = "#122033";
+    this.statusText.outlineWidth = 5;
+    this.statusText.width = "300px";
     this.statusText.height = "270px";
-    this.statusText.paddingLeft = "16px";
-    this.statusText.paddingTop = "16px";
+    this.statusText.left = "28px";
+    this.statusText.top = "24px";
     this.statusText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
     this.statusText.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
     this.statusText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
     this.statusText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
     this.texture.addControl(this.statusText);
 
+    this.scorePanel = new Rectangle("scorePanel");
+    this.scorePanel.width = "190px";
+    this.scorePanel.height = "74px";
+    this.scorePanel.thickness = 2;
+    this.scorePanel.color = "#8db6ce";
+    this.scorePanel.cornerRadius = 6;
+    this.scorePanel.background = "#13243bd9";
+    this.scorePanel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+    this.scorePanel.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    this.scorePanel.top = "72px";
+    this.scorePanel.paddingRight = "16px";
+    this.scorePanel.isPointerBlocker = false;
+    this.texture.addControl(this.scorePanel);
+
+    this.scoreText = new TextBlock("scoreText");
+    this.scoreText.color = "#ffcb2f";
+    this.scoreText.fontSize = 20;
+    this.scoreText.fontWeight = "bold";
+    this.scoreText.outlineColor = "#122033";
+    this.scoreText.outlineWidth = 4;
+    this.scoreText.width = "176px";
+    this.scoreText.height = "66px";
+    this.scoreText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+    this.scoreText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+    this.scorePanel.addControl(this.scoreText);
+
+    this.questPanel = new Rectangle("questPanel");
+    this.questPanel.width = "300px";
+    this.questPanel.height = "132px";
+    this.questPanel.thickness = 2;
+    this.questPanel.color = "#8db6ce";
+    this.questPanel.cornerRadius = 6;
+    this.questPanel.background = "#13243bd9";
+    this.questPanel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+    this.questPanel.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    this.questPanel.top = "220px";
+    this.questPanel.isPointerBlocker = false;
+    this.texture.addControl(this.questPanel);
+
+    this.questText = new TextBlock("questText");
+    this.questText.color = "#ffffff";
+    this.questText.fontSize = 15;
+    this.questText.fontWeight = "bold";
+    this.questText.outlineColor = "#122033";
+    this.questText.outlineWidth = 3;
+    this.questText.width = "280px";
+    this.questText.height = "120px";
+    this.questText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+    this.questText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    this.questPanel.addControl(this.questText);
+
     const bottomPanel = new StackPanel("bottomPanel");
-    bottomPanel.width = "520px";
+    bottomPanel.width = "360px";
     bottomPanel.height = "180px";
-    bottomPanel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+    bottomPanel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
     bottomPanel.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+    bottomPanel.paddingRight = "24px";
     bottomPanel.paddingBottom = "24px";
     this.texture.addControl(bottomPanel);
 
     this.powerLabel = new TextBlock("powerLabel");
     this.powerLabel.height = "32px";
-    this.powerLabel.color = "#f2f4f8";
+    this.powerLabel.color = "#ffffff";
     this.powerLabel.fontSize = 20;
-    this.powerLabel.outlineColor = "#10131a";
+    this.powerLabel.fontWeight = "bold";
+    this.powerLabel.outlineColor = "#122033";
     this.powerLabel.outlineWidth = 4;
     bottomPanel.addControl(this.powerLabel);
 
@@ -105,11 +180,11 @@ export class PrototypeHud {
     this.powerSlider.minimum = aimConfig.minPowerRatio;
     this.powerSlider.maximum = 1;
     this.powerSlider.value = aimConfig.defaultPowerRatio;
-    this.powerSlider.width = "480px";
+    this.powerSlider.width = "340px";
     this.powerSlider.height = "30px";
-    this.powerSlider.color = "#e8613c";
-    this.powerSlider.background = "#2a3142";
-    this.powerSlider.borderColor = "#10131a";
+    this.powerSlider.color = "#ffca28";
+    this.powerSlider.background = "#263b53";
+    this.powerSlider.borderColor = "#0d1928";
     this.powerSlider.thumbWidth = "24px";
     this.powerSlider.isThumbCircle = true;
     this.powerSlider.paddingBottom = "16px";
@@ -124,7 +199,7 @@ export class PrototypeHud {
     buttonRow.height = "70px";
     bottomPanel.addControl(buttonRow);
 
-    buttonRow.addControl(this.createButton("launchButton", "Lancer", "#e8613c", () => {
+    buttonRow.addControl(this.createButton("launchButton", "LANCER", "#ffbd19", () => {
       if (this.actionMode === "launch") {
         actions.onLaunch();
       } else {
@@ -132,9 +207,10 @@ export class PrototypeHud {
       }
     }));
     this.actionButton = buttonRow.children[0] as Button;
-    buttonRow.addControl(
-      this.createButton("resetButton", "Reinitialiser", "#4a5873", actions.onReset),
-    );
+    this.actionButton.width = "165px";
+    const resetButton = this.createButton("resetButton", "REJOUER", "#29435d", actions.onReset);
+    resetButton.width = "165px";
+    buttonRow.addControl(resetButton);
 
     this.powerLabel.text = formatPower(this.powerSlider.value);
     this.impactIndicator = new ImpactIndicator(this.texture);
@@ -156,7 +232,7 @@ export class PrototypeHud {
       this.skillPanel.setVisible(false),
     );
 
-    this.skillButton = this.createButton("skillButton", "Competences", "#7a4fd0", () =>
+    this.skillButton = this.createButton("skillButton", "COMPETENCES", "#2f6686", () =>
       this.skillPanel.setVisible(!this.skillPanel.isVisible),
     );
     this.skillButton.width = "200px";
@@ -166,7 +242,7 @@ export class PrototypeHud {
     this.skillButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
     this.skillButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
     this.skillButton.left = "16px";
-    this.skillButton.top = "280px";
+    this.skillButton.top = "320px";
     this.texture.addControl(this.skillButton);
 
     this.collectionPanel = new CollectionPanel(
@@ -176,7 +252,7 @@ export class PrototypeHud {
       actions.onSelectLevel,
       () => this.collectionPanel.setVisible(false),
     );
-    this.collectionButton = this.createButton("collectionButton", "Collection", "#3f8f6b", () =>
+    this.collectionButton = this.createButton("collectionButton", "COLLECTION", "#2f6686", () =>
       this.collectionPanel.setVisible(!this.collectionPanel.isVisible),
     );
     this.collectionButton.width = "200px";
@@ -184,7 +260,7 @@ export class PrototypeHud {
     this.collectionButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
     this.collectionButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
     this.collectionButton.left = "16px";
-    this.collectionButton.top = "330px";
+    this.collectionButton.top = "370px";
     this.texture.addControl(this.collectionButton);
 
     this.cheatToggleButton = this.createButton("cheatToggleButton", "Triche : desactivee", "#6b3f3f", actions.onToggleCheat);
@@ -212,8 +288,8 @@ export class PrototypeHud {
     this.texture.addControl(this.cheatButton);
 
     this.buildPanel = new StackPanel("buildPanel");
-    this.buildPanel.width = "240px";
-    this.buildPanel.height = "190px";
+    this.buildPanel.width = "250px";
+    this.buildPanel.height = "250px";
     this.buildPanel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
     this.buildPanel.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
     this.buildPanel.paddingLeft = "16px";
@@ -223,10 +299,10 @@ export class PrototypeHud {
     this.characterButton = this.createButton(
       "characterButton",
       "Personnage",
-      "#3f8f6b",
+      "#315c78",
       actions.onCycleCharacter,
     );
-    this.itemButton = this.createButton("itemButton", "Objet", "#4a5873", actions.onCycleItem);
+    this.itemButton = this.createButton("itemButton", "Objet", "#315c78", actions.onCycleItem);
     this.characterButton.width = "220px";
     this.itemButton.width = "220px";
     this.characterButton.paddingBottom = "8px";
@@ -245,7 +321,7 @@ export class PrototypeHud {
     this.abilityButton = this.createButton(
       "abilityButton",
       "Capacite",
-      "#7a4fd0",
+      "#e87925",
       actions.onActivateAbility,
     );
     this.abilityButton.width = "240px";
@@ -255,7 +331,7 @@ export class PrototypeHud {
     this.abilityButton.paddingBottom = "24px";
     this.abilityButton.isVisible = false;
     this.texture.addControl(this.abilityButton);
-    this.launcherButton = this.createButton("launcherButton", "Lanceur", "#9b6b3d", actions.onCycleLauncher);
+    this.launcherButton = this.createButton("launcherButton", "Lanceur", "#315c78", actions.onCycleLauncher);
     this.launcherButton.width = "220px";
     this.launcherButton.paddingBottom = "8px";
     this.buildPanel.addControl(this.launcherButton);
@@ -359,7 +435,7 @@ export class PrototypeHud {
     if (label) {
       label.text = mode === "launch" ? "Lancer" : "Terminer le tir";
     }
-    this.actionButton.background = mode === "launch" ? "#e8613c" : "#3f8f6b";
+    this.actionButton.background = mode === "launch" ? "#ffbd19" : "#2f8a65";
   }
 
   setPowerEnabled(enabled: boolean): void {
@@ -374,6 +450,22 @@ export class PrototypeHud {
 
   setStatus(message: string): void {
     this.statusText.text = message;
+    const lineCount = message.split("\n").length;
+    this.statusPanel.height = `${Math.max(190, lineCount * 25 + 20)}px`;
+  }
+
+  setScore(score: number, target: number): void {
+    this.scoreText.text = `SCORE\n${score.toLocaleString("fr-FR")} / ${target.toLocaleString("fr-FR")}`;
+  }
+
+  setQuests(statuses: readonly QuestStatus[]): void {
+    this.questText.text = [
+      "QUETES",
+      ...statuses.slice(0, 3).map((status) => {
+        const marker = status.completed ? "OK" : "-";
+        return `${marker} ${status.definition.name} ${status.current}/${status.definition.targetValue}`;
+      }),
+    ].join("\n");
   }
 
   setPower(ratio: number): void {
@@ -393,9 +485,14 @@ export class PrototypeHud {
     button.paddingRight = "12px";
     button.color = "#ffffff";
     button.background = color;
-    button.cornerRadius = 10;
-    button.thickness = 0;
-    button.fontSize = 20;
+    button.cornerRadius = 6;
+    button.thickness = 2;
+    button.fontSize = 18;
+    button.fontWeight = "bold";
+    if (button.textBlock) {
+      button.textBlock.outlineColor = "#101d2d";
+      button.textBlock.outlineWidth = 2;
+    }
     button.onPointerClickObservable.add(() => onClick());
     return button;
   }

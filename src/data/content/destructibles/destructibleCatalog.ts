@@ -10,7 +10,7 @@ export const destructibleCatalog: Readonly<Record<string, DestructibleDefinition
     displayName: "Voiture",
     destructionMode: "crush",
     stages: 3,
-    minimumImpactThreshold: 300,
+    minimumImpactThreshold: 150,
     damageScale: 0.01,
     scoreValue: 300,
     staticUntilDestroyed: false,

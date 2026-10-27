@@ -24,6 +24,7 @@ export interface DestructibleMaterials {
 
 export interface DestructionResult {
   readonly id: string;
+  readonly position: Vector3;
   readonly definition: DestructibleDefinition;
   readonly state: DestructibleState;
   readonly destroyed: boolean;
@@ -100,6 +101,7 @@ export class DestructibleObject {
     this.applyDestruction();
     return {
       id: this.id,
+      position: this.position.clone(),
       definition: this.definition,
       state: this.state,
       destroyed: true,
@@ -137,6 +139,7 @@ export class DestructibleObject {
 
     return {
       id: this.id,
+      position: this.position.clone(),
       definition: this.definition,
       state: this.state,
       destroyed: outcome.destroyed,

@@ -26,7 +26,7 @@ export const aimConfig = {
   defaultPowerRatio: 0.7,
   minPowerRatio: 0.05,
   trajectorySampleCount: 32,
-  reticleDiameter: 6,
+  reticleDiameter: 2.4,
 } as const;
 
 export const shotConfig = {
