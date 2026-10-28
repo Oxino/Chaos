@@ -10,8 +10,13 @@ import type { DestructibleState } from "../../data/content/destructibles/destruc
 import { explosionFalloff } from "../ability/explosionMath";
 import type { DebrisBudget } from "./DebrisBudget";
 import type { DestructibleBuilding } from "./DestructibleBuilding";
-import type { DestructibleObject, DestructionResult } from "./DestructibleObject";
-import { maxHealthForDefinition, resolveImpact } from "./impactMath";
+import type {
+  DestructibleDebugPatch,
+  DestructibleDebugValues,
+  DestructibleObject,
+  DestructionResult,
+} from "./DestructibleObject";
+import { resolveImpact } from "./impactMath";
 
 export type DestructionListener = (result: DestructionResult) => void;
 
@@ -91,6 +96,34 @@ export class DestructionService {
     return this.debris.activeCount;
   }
 
+  get debugObjects(): readonly DestructibleDebugValues[] {
+    return [...this.objects.values()].map((object) => object.debugValues);
+  }
+
+  applyDebugPatch(id: string, patch: DestructibleDebugPatch): boolean {
+    const object = this.objects.get(id);
+    if (!object) {
+      return false;
+    }
+    object.applyDebugPatch(patch);
+    if (object.isDestroyed) {
+      this.destroyedIds.add(id);
+    } else {
+      this.destroyedIds.delete(id);
+    }
+    return true;
+  }
+
+  resetDebugObject(id: string): boolean {
+    const object = this.objects.get(id);
+    if (!object) {
+      return false;
+    }
+    object.resetDebugValues();
+    this.destroyedIds.delete(id);
+    return true;
+  }
+
   register(destructible: DestructibleObject, body: PhysicsBody): void {
     this.objects.set(destructible.id, destructible);
     this.bodies.set(body, destructible);
@@ -142,7 +175,7 @@ export class DestructionService {
       remainingStages: Math.max(0, destructible.currentStage),
       totalStages: destructible.definition.stages,
       currentHealth: destructible.currentHealth,
-      maxHealth: maxHealthForDefinition(destructible.definition),
+      maxHealth: destructible.maxHealth,
       estimatedDamage: resolveImpact(
         effectiveEstimatedImpact,
         destructible.currentHealth,

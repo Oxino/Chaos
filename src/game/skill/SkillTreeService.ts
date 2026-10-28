@@ -55,6 +55,10 @@ export class SkillTreeService {
     this.earnedPoints = Math.max(0, earnedPoints);
   }
 
+  setAvailablePoints(availablePoints: number): void {
+    this.earnedPoints = spentPoints(skillCatalog, this.ranks) + Math.max(0, Math.floor(availablePoints));
+  }
+
   /** Renvoie true si un rang a effectivement ete achete. */
   upgrade(nodeId: string): boolean {
     const node = skillCatalog.find((candidate) => candidate.id === nodeId);

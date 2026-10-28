@@ -37,12 +37,29 @@ export interface DestructionResult {
   readonly damageApplied: number;
 }
 
+export interface DestructibleDebugValues {
+  readonly id: string;
+  readonly displayName: string;
+  readonly state: DestructibleState;
+  readonly currentHealth: number;
+  readonly maxHealth: number;
+  readonly minimumImpactThreshold: number;
+  readonly damageScale: number;
+  readonly scoreValue: number;
+  readonly dynamicMass: number;
+  readonly destructionImpulse: number;
+}
+
+export type DestructibleDebugPatch = Partial<Omit<DestructibleDebugValues, "id" | "displayName" | "state">>;
+
 /**
  * Un element destructible du decor (spec 6.4, 16.4). Il conserve son etat pendant toute la
  * partie et sait revenir a son etat initial lors de la reinitialisation (spec 6.3).
  */
 export class DestructibleObject {
   private health: number;
+  private readonly initialDefinition: DestructibleDefinition;
+  private runtimeDefinition: DestructibleDefinition;
   private frozen = false;
   private readonly initialPosition: Vector3;
   private readonly initialRotation: Quaternion;
@@ -51,12 +68,14 @@ export class DestructibleObject {
 
   constructor(
     readonly id: string,
-    readonly definition: DestructibleDefinition,
+    definition: DestructibleDefinition,
     private readonly mesh: Mesh,
     private readonly aggregate: PhysicsAggregate,
     private readonly scene: Scene,
     private readonly materials: DestructibleMaterials,
   ) {
+    this.initialDefinition = { ...definition };
+    this.runtimeDefinition = { ...this.initialDefinition };
     this.health = maxHealthForDefinition(definition);
     this.initialPosition = mesh.position.clone();
     this.initialRotation = (mesh.rotationQuaternion ?? Quaternion.Identity()).clone();
@@ -66,6 +85,10 @@ export class DestructibleObject {
 
   get state(): DestructibleState {
     return stateForHealth(this.health, this.maxHealth);
+  }
+
+  get definition(): DestructibleDefinition {
+    return this.runtimeDefinition;
   }
 
   get currentStage(): number {
@@ -103,6 +126,58 @@ export class DestructibleObject {
   /** Vitesse lineaire courante, utilisee par le budget de debris. */
   get speed(): number {
     return this.aggregate.body.getLinearVelocity().length();
+  }
+
+  get debugValues(): DestructibleDebugValues {
+    return {
+      id: this.id,
+      displayName: this.definition.displayName,
+      state: this.state,
+      currentHealth: this.currentHealth,
+      maxHealth: this.maxHealth,
+      minimumImpactThreshold: this.definition.minimumImpactThreshold,
+      damageScale: this.definition.damageScale,
+      scoreValue: this.definition.scoreValue,
+      dynamicMass: this.definition.dynamicMass,
+      destructionImpulse: this.definition.destructionImpulse,
+    };
+  }
+
+  applyDebugPatch(patch: DestructibleDebugPatch): void {
+    const wasDestroyed = this.isDestroyed;
+    const maxHealth = positiveValue(patch.maxHealth, this.maxHealth);
+    this.runtimeDefinition = {
+      ...this.runtimeDefinition,
+      maxHealth,
+      minimumImpactThreshold: nonNegativeValue(
+        patch.minimumImpactThreshold,
+        this.definition.minimumImpactThreshold,
+      ),
+      damageScale: nonNegativeValue(patch.damageScale, this.definition.damageScale),
+      scoreValue: nonNegativeValue(patch.scoreValue, this.definition.scoreValue),
+      dynamicMass: positiveValue(patch.dynamicMass, this.definition.dynamicMass),
+      destructionImpulse: nonNegativeValue(
+        patch.destructionImpulse,
+        this.definition.destructionImpulse,
+      ),
+    };
+    const nextHealth = Math.max(0, Math.min(maxHealth, finiteValue(patch.currentHealth, this.health)));
+    if (wasDestroyed && nextHealth > 0) {
+      this.resetTransformAndPhysics();
+    }
+    this.health = nextHealth;
+    this.applyVisualState();
+    if (!wasDestroyed && this.isDestroyed) {
+      this.applyDestruction();
+    }
+    if (!this.definition.staticUntilDestroyed || this.isDestroyed) {
+      this.aggregate.body.setMassProperties({ mass: this.definition.dynamicMass });
+    }
+  }
+
+  resetDebugValues(): void {
+    this.runtimeDefinition = { ...this.initialDefinition };
+    this.reset();
   }
 
   /** Destruction sans impact, utilisee par l'effondrement d'un batiment. */
@@ -171,6 +246,11 @@ export class DestructibleObject {
 
   reset(): void {
     this.health = this.maxHealth;
+    this.resetTransformAndPhysics();
+    this.applyVisualState();
+  }
+
+  private resetTransformAndPhysics(): void {
     this.frozen = false;
     this.mesh.material = this.initialMaterial;
     this.mesh.scaling.copyFrom(this.initialScaling);
@@ -179,6 +259,9 @@ export class DestructibleObject {
     body.setMotionType(
       this.definition.staticUntilDestroyed ? PhysicsMotionType.STATIC : PhysicsMotionType.DYNAMIC,
     );
+    if (!this.definition.staticUntilDestroyed) {
+      body.setMassProperties({ mass: this.definition.dynamicMass });
+    }
     body.setLinearVelocity(Vector3.Zero());
     body.setAngularVelocity(Vector3.Zero());
 
@@ -227,4 +310,17 @@ export class DestructibleObject {
       body.disablePreStep = true;
     });
   }
+}
+
+function finiteValue(value: number | undefined, fallback: number): number {
+  return value !== undefined && Number.isFinite(value) ? value : fallback;
+}
+
+function nonNegativeValue(value: number | undefined, fallback: number): number {
+  return Math.max(0, finiteValue(value, fallback));
+}
+
+function positiveValue(value: number | undefined, fallback: number): number {
+  const candidate = finiteValue(value, fallback);
+  return candidate > 0 ? candidate : fallback;
 }

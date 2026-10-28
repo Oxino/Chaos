@@ -46,6 +46,17 @@ export function resolveLevel(totalXp: number, config: ProgressionConfig): LevelP
   return { level, xpIntoLevel: remaining, xpForNextLevel: xpForLevel(level, config) };
 }
 
+/** XP totale minimale requise pour commencer un niveau donne. */
+export function totalXpForLevel(level: number, config: ProgressionConfig): number {
+  assertLevel(level);
+  const cappedLevel = Math.min(level, config.maxLevel);
+  let total = 0;
+  for (let current = 1; current < cappedLevel; current += 1) {
+    total += xpForLevel(current, config);
+  }
+  return total;
+}
+
 /** Points gagnes en atteignant ce niveau precis. */
 export function skillPointsForLevel(level: number, config: ProgressionConfig): number {
   assertLevel(level);

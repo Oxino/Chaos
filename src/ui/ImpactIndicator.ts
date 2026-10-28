@@ -31,6 +31,7 @@ export class ImpactIndicator {
     this.panel.paddingTop = "16px";
     this.panel.paddingRight = "16px";
     this.panel.alpha = 0;
+    this.panel.isPointerBlocker = false;
     texture.addControl(this.panel);
 
     const stack = new StackPanel("impactStack");

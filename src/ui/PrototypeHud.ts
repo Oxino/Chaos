@@ -17,6 +17,9 @@ import type { SkillNodeStatus } from "../game/skill/SkillTreeService";
 import { CollectionPanel, type CollectionProfileView } from "./CollectionPanel";
 import type { CollectionCategory } from "../game/save/saveSchema";
 import type { QuestStatus } from "../game/quest/questMath";
+import { DebugPanel, type DebugPanelView } from "./DebugPanel";
+import type { TimeOfDay, WeatherType } from "../data/content/levels/levelTypes";
+import type { DestructibleDebugPatch } from "../game/destruction/DestructibleObject";
 
 export interface PrototypeHudActions {
   readonly onLaunch: () => void;
@@ -33,8 +36,17 @@ export interface PrototypeHudActions {
   readonly onBuyItem: (id: string) => void;
   readonly onEquipCollection: (category: CollectionCategory, id: string) => void;
   readonly onSelectLevel: (index: number) => void;
+  readonly onOpenDebug: () => void;
   readonly onToggleCheat: () => void;
   readonly onActivateCheat: () => void;
+  readonly onSetDebugWeather: (weather: WeatherType) => void;
+  readonly onSetDebugTimeOfDay: (timeOfDay: TimeOfDay) => void;
+  readonly onSetDebugCurrency: (value: number) => void;
+  readonly onSetDebugXp: (value: number) => void;
+  readonly onSetDebugLevel: (value: number) => void;
+  readonly onSetDebugSkillPoints: (value: number) => void;
+  readonly onPatchDebugDestructible: (id: string, patch: DestructibleDebugPatch) => void;
+  readonly onResetDebugDestructible: (id: string) => void;
 }
 
 export interface BuildSummary {
@@ -74,6 +86,7 @@ export class PrototypeHud {
   private readonly collectionButton: Button;
   private readonly cheatToggleButton: Button;
   private readonly cheatButton: Button;
+  private readonly debugPanel: DebugPanel;
   private secretMs = 0;
   private actionMode: HudActionMode = "launch";
 
@@ -272,13 +285,37 @@ export class PrototypeHud {
     this.collectionButton.top = "370px";
     this.texture.addControl(this.collectionButton);
 
-    this.cheatToggleButton = this.createButton("cheatToggleButton", "Triche : desactivee", "#6b3f3f", actions.onToggleCheat);
+    this.debugPanel = new DebugPanel(
+      this.texture,
+      {
+        onToggleCheat: actions.onToggleCheat,
+        onSetWeather: actions.onSetDebugWeather,
+        onSetTimeOfDay: actions.onSetDebugTimeOfDay,
+        onSetCurrency: actions.onSetDebugCurrency,
+        onSetXp: actions.onSetDebugXp,
+        onSetLevel: actions.onSetDebugLevel,
+        onSetSkillPoints: actions.onSetDebugSkillPoints,
+        onPatchDestructible: actions.onPatchDebugDestructible,
+        onResetDestructible: actions.onResetDebugDestructible,
+        onResetLevel: actions.onReset,
+      },
+      () => this.debugPanel.setVisible(false),
+    );
+    this.cheatToggleButton = this.createButton(
+      "cheatToggleButton",
+      "MODE TRICHE / DEBUG",
+      "#6b3f3f",
+      () => {
+        actions.onOpenDebug();
+        this.debugPanel.setVisible(true);
+      },
+    );
     this.cheatToggleButton.width = "220px";
     this.cheatToggleButton.height = "44px";
     this.cheatToggleButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
     this.cheatToggleButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
     this.cheatToggleButton.paddingRight = "16px";
-    this.cheatToggleButton.paddingTop = "16px";
+    this.cheatToggleButton.top = "16px";
     this.texture.addControl(this.cheatToggleButton);
 
     this.cheatButton = this.createButton(
@@ -379,11 +416,15 @@ export class PrototypeHud {
   }
 
   setCheatEnabled(enabled: boolean, canActivate: boolean): void {
-    setButtonLabel(this.cheatToggleButton, enabled ? "Triche : activee" : "Triche : desactivee");
+    setButtonLabel(this.cheatToggleButton, enabled ? "TRICHE / DEBUG : ACTIF" : "MODE TRICHE / DEBUG");
     this.cheatToggleButton.background = enabled ? "#8f3f3f" : "#6b3f3f";
     this.cheatButton.isVisible = enabled;
     this.cheatButton.isEnabled = canActivate;
     this.cheatButton.alpha = canActivate ? 1 : 0.45;
+  }
+
+  renderDebug(view: DebugPanelView): void {
+    this.debugPanel.render(view);
   }
 
   setBuild(summary: BuildSummary): void {

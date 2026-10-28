@@ -486,13 +486,23 @@ Taux de rareté, probabilités, garanties, fragments, coût d'un tirage, plafond
 - message humoristique, par exemple : « Bravo, vous êtes le plus fort. Vous avez gagné. »
 
 Ce mode est un outil de fun/test, pas un élément d'équilibrage normal.
-**Utilisation [VALIDÉE] :** pendant la visée, activer `Triche : activee`, lancer un personnage,
+**Utilisation [VALIDÉE] :** pendant la visée, ouvrir `MODE TRICHE / DEBUG` ; le premier clic
+active également la triche lorsque le mode de partie le permet. Lancer ensuite un personnage,
 puis cliquer sur `Bombe atomique (apres lancer)` pendant le vol ou la stabilisation. Le raccourci
 `B` déclenche la même action sur PC. Le bouton reste désactivé avant le lancement, car l'explosion
 est centrée sur la position du personnage.
 **[PROPOSITION]** Marquer le score comme non officiel ou désactiver les succès quand le mode est actif. Ce garde-fou n'a pas encore été confirmé.
 
 **Note d'implémentation** : le souffle de zone de la bombe (§5.4) est générique et paramétrable. La bombe atomique pourra le réutiliser avec un rayon et une intensité bien plus grands, sans nouveau système.
+
+**Panneau de réglage [VALIDÉ]** : le bouton `MODE TRICHE / DEBUG` active le mode triche et
+ouvre une interface Babylon GUI destinée à l'équilibrage. Elle permet de forcer la météo et la
+période, de modifier monnaie, XP, niveau et points de compétence disponibles, puis de parcourir
+chaque destructible du niveau pour régler sa vie actuelle/maximale, son seuil d'impact, son
+facteur de progression d'étapes, sa valeur de score, sa masse dynamique et son impulsion de dispersion. Un
+objet peut être détruit ou restauré sans attribuer de score. Monnaie et XP sont sauvegardées ;
+les points de compétence forcés et les overrides d'ambiance/décor restent limités à la session
+ou au niveau courant afin de ne pas altérer les catalogues de contenu.
 
 # 13. UX, UI ET ÉCRANS
 
@@ -804,7 +814,7 @@ Niveaux et thèmes supplémentaires, 3–4 secrets par niveau, météo/heure al�
 7D — Mode triche : option désactivée par défaut, bombe cartoon réutilisant le souffle existant.
 7E — Validation : tests unitaires, typecheck, build et smoke test navigateur.
 
-**État actuel :** 7A à 7D implémentées : quatre niveaux data-driven avec 3 à 4 secrets chacun, sélection aléatoire météo/heure avec variation visuelle, mode libre accessible depuis la carte sans récompense ni progression officielle, et mode triche désactivé par défaut avec bombe atomique cartoon. Les secrets sont maintenant des zones invisibles révélées uniquement au passage du personnage. Aube, jour, crépuscule et nuit disposent d'éclairages dédiés ; la pluie et la neige sont animées, et le brouillard dispose d'un effet exponentiel. Les modificateurs météo de gameplay restent volontairement hors périmètre.
+**État actuel :** 7A à 7D implémentées : quatre niveaux data-driven avec 3 à 4 secrets chacun, sélection aléatoire météo/heure avec variation visuelle, mode libre accessible depuis la carte sans récompense ni progression officielle, et mode triche avec bombe atomique cartoon et panneau d'équilibrage en jeu. Les secrets sont maintenant des zones invisibles révélées uniquement au passage du personnage. Aube, jour, crépuscule et nuit disposent d'éclairages dédiés ; la pluie et la neige sont animées, et le brouillard dispose d'un effet exponentiel. Le panneau permet de forcer ces ambiances, la progression et les propriétés runtime des destructibles sans altérer les catalogues. Les modificateurs météo de gameplay restent volontairement hors périmètre.
 
 ## Phase 8 — Polish
 Animations, VFX, audio, tutoriel, accessibilité, optimisation mobile, tests de régression et préparation de sortie.

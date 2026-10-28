@@ -24,7 +24,8 @@ Le jeu est conçu pour le PC et le mobile en orientation paysage. Il est solo, g
 - Capacités actives Réacteur et Bombe.
 - Progression XP, niveaux, quêtes, secrets, compétences et plusieurs niveaux.
 - Collection, inventaire, monnaie gagnée en jeu et tirages de gacha.
-- Mode libre et météo/heure variables.
+- Mode libre et météo/heure variables, avec pluie, neige et brouillard visuels.
+- Panneau **Mode triche / Debug** pour équilibrer en jeu progression, ambiance et destructibles.
 
 ## Stack technique
 
@@ -86,6 +87,8 @@ npm run preview
 - Jauge de puissance : régler la vitesse initiale.
 - Bouton **Lancer** ou barre d'espace : lancer le personnage.
 - Touche **A** : activer la capacité disponible pendant le vol.
+- Touche **B** : déclencher la bombe atomique pendant le vol lorsque le mode triche est actif.
+- Bouton **Mode triche / Debug** : ouvrir les réglages d'équilibrage et activer le mode triche.
 - La molette n'est pas utilisée.
 
 ### Mobile
@@ -94,6 +97,17 @@ npm run preview
 - Jauge de puissance : régler la vitesse initiale.
 - Bouton **Lancer** : lancer le personnage.
 - Bouton de capacité : activer la capacité disponible pendant le vol.
+- Bouton **Mode triche / Debug** : ouvrir les réglages d'équilibrage.
+
+## Panneau de debug
+
+Le bouton **Mode triche / Debug**, en haut à droite pendant la visée, ouvre une interface en trois onglets :
+
+- **Partie** : activation de la triche, monnaie, XP, niveau, points de compétence disponibles et réinitialisation de la partie.
+- **Ambiance** : sélection immédiate de la météo et de la période de la journée.
+- **Décor** : navigation parmi tous les destructibles du niveau et édition de leur vie, seuil d'impact, facteur de dégâts, score, masse dynamique et impulsion de dispersion.
+
+La monnaie, l'XP et le niveau correspondant sont enregistrés dans IndexedDB. Les points de compétence forcés, la météo, l'heure et les propriétés du décor sont des réglages temporaires de session ou de niveau. L'action **Restaurer** remet l'élément sélectionné dans son état physique initial et rétablit les valeurs de son catalogue.
 
 ## Architecture
 

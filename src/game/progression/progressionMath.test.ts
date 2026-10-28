@@ -4,6 +4,7 @@ import {
   resolveLevel,
   skillPointsForLevel,
   totalSkillPoints,
+  totalXpForLevel,
   xpForLevel,
   xpFromScore,
 } from "./progressionMath";
@@ -69,6 +70,19 @@ describe("resolveLevel", () => {
 
   it("rejette une XP invalide", () => {
     expect(() => resolveLevel(-1, config)).toThrow(RangeError);
+  });
+});
+
+describe("totalXpForLevel", () => {
+  it("retourne le debut exact de chaque niveau", () => {
+    expect(totalXpForLevel(1, config)).toBe(0);
+    expect(totalXpForLevel(2, config)).toBe(800);
+    expect(totalXpForLevel(3, config)).toBe(2000);
+    expect(resolveLevel(totalXpForLevel(5, config), config).level).toBe(5);
+  });
+
+  it("plafonne au niveau maximum", () => {
+    expect(totalXpForLevel(99, config)).toBe(totalXpForLevel(10, config));
   });
 });
 

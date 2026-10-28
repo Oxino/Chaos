@@ -20,7 +20,7 @@ import {
 } from "../data/config/gameplayConfig";
 import { collectionConfig } from "../data/config/collectionConfig";
 import { levelCatalog } from "../data/content/levels/levelCatalog";
-import type { LevelBlockout } from "../data/content/levels/levelTypes";
+import type { LevelBlockout, TimeOfDay, WeatherType } from "../data/content/levels/levelTypes";
 import { describePassive } from "../data/content/passives/passiveTypes";
 import { AbilityController, type AbilityState } from "../game/ability/AbilityController";
 import { AimingController } from "../game/aiming/AimingController";
@@ -36,7 +36,12 @@ import { buildLevelBlockout } from "../game/level/buildLevelBlockout";
 import { mapBounds } from "../game/level/boundaryMath";
 import { selectAmbience, type AmbienceSelection } from "../game/level/ambienceMath";
 import { unlockedLevelCount } from "../game/level/levelProgress";
-import { resolveLevel, totalSkillPoints, xpFromScore } from "../game/progression/progressionMath";
+import {
+  resolveLevel,
+  totalSkillPoints,
+  totalXpForLevel,
+  xpFromScore,
+} from "../game/progression/progressionMath";
 import { QuestService } from "../game/quest/QuestService";
 import { ComboChainTracker } from "../game/score/ComboChainTracker";
 import { ScoreService } from "../game/score/ScoreService";
@@ -188,8 +193,17 @@ export class GameApp {
       onBuyItem: (id) => this.buyItemUses(id),
       onEquipCollection: (category, id) => this.equipCollection(category, id),
       onSelectLevel: (index) => this.startFreeLevel(index),
+      onOpenDebug: () => this.openDebug(),
       onToggleCheat: () => this.toggleCheat(),
       onActivateCheat: () => this.activateCheat(),
+      onSetDebugWeather: (weather) => this.setDebugWeather(weather),
+      onSetDebugTimeOfDay: (timeOfDay) => this.setDebugTimeOfDay(timeOfDay),
+      onSetDebugCurrency: (value) => this.setDebugCurrency(value),
+      onSetDebugXp: (value) => this.setDebugXp(value),
+      onSetDebugLevel: (value) => this.setDebugLevel(value),
+      onSetDebugSkillPoints: (value) => this.setDebugSkillPoints(value),
+      onPatchDebugDestructible: (id, patch) => this.level?.destruction.applyDebugPatch(id, patch),
+      onResetDebugDestructible: (id) => this.level?.destruction.resetDebugObject(id),
     });
 
     window.addEventListener("resize", this.handleResize);
@@ -736,6 +750,50 @@ export class GameApp {
     );
   }
 
+  private openDebug(): void {
+    if (!this.cheatEnabled && this.level?.shots.currentState === "Aiming" && this.sessionMode !== "free") {
+      this.toggleCheat();
+    }
+  }
+
+  private setDebugWeather(weather: WeatherType): void {
+    if (!this.ambience) {
+      return;
+    }
+    this.ambience = { ...this.ambience, weather };
+    this.applyAmbience();
+  }
+
+  private setDebugTimeOfDay(timeOfDay: TimeOfDay): void {
+    if (!this.ambience) {
+      return;
+    }
+    this.ambience = { ...this.ambience, timeOfDay };
+    this.applyAmbience();
+  }
+
+  private setDebugCurrency(value: number): void {
+    void this.save.replace({ ...this.save.snapshot, currency: Math.max(0, Math.floor(value)) })
+      .then(() => this.refreshCollection());
+  }
+
+  private setDebugXp(value: number): void {
+    void this.save.replace({ ...this.save.snapshot, totalXp: Math.max(0, Math.floor(value)) })
+      .then(() => {
+        this.refreshSkillPoints();
+        this.applySkillBonuses();
+        this.refreshCollection();
+      });
+  }
+
+  private setDebugLevel(level: number): void {
+    this.setDebugXp(totalXpForLevel(level, progressionConfig));
+  }
+
+  private setDebugSkillPoints(points: number): void {
+    this.skills.setAvailablePoints(points);
+  }
+
   private activateCheat(): void {
     if (!this.cheatEnabled) {
       this.hud.showSecret("Activez d'abord le mode triche.");
@@ -810,6 +868,17 @@ export class GameApp {
       !isAiming && this.sessionMode === "cheat" && level.shots.canEndManually,
     );
     this.hud.setSkillButtonLabel(this.skills.availablePoints);
+    const progress = resolveLevel(this.save.totalXp, progressionConfig);
+    this.hud.renderDebug({
+      cheatEnabled: this.cheatEnabled,
+      weather: this.ambience?.weather ?? "sunny",
+      timeOfDay: this.ambience?.timeOfDay ?? "day",
+      currency: this.save.currency,
+      totalXp: this.save.totalXp,
+      level: progress.level,
+      availableSkillPoints: this.skills.availablePoints,
+      destructibles: level.destruction.debugObjects,
+    });
     this.hud.setScore(this.score.total, level.blockout.targetScore);
     this.hud.setQuests(this.quests.statuses);
     if (this.hud.skillPanelOpen) {

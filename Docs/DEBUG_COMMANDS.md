@@ -1,8 +1,49 @@
-# Commandes de debug locales
+# Outils de debug locaux
 
-Ce document décrit l'API de debug disponible pendant le développement de Chaos.
+Ce document décrit le panneau graphique de réglage et l'API console disponibles pour tester et équilibrer Chaos.
 
-## Conditions
+## Panneau Mode triche / Debug
+
+Pendant la visée, cliquer sur **MODE TRICHE / DEBUG** en haut à droite. Le premier clic ouvre le panneau et active le mode triche lorsque la partie le permet.
+
+### Partie
+
+- Activer ou désactiver le mode triche.
+- Fixer la monnaie et l'XP totale.
+- Fixer le niveau : le jeu calcule et sauvegarde l'XP minimale correspondant au palier choisi.
+- Fixer les points de compétence actuellement disponibles.
+- Réinitialiser la partie courante.
+
+La monnaie et l'XP sont persistées dans IndexedDB. Les points disponibles forcés sont temporaires et ne remplacent ni les rangs sauvegardés ni la courbe normale de progression.
+
+### Ambiance
+
+La météo et la période sont appliquées immédiatement :
+
+- météo : soleil, nuages, pluie, neige ou brouillard ;
+- période : matin, jour, coucher de soleil ou nuit.
+
+Ces overrides restent actifs jusqu'au chargement d'un autre niveau. Ils ne modifient pas les options du catalogue de niveaux.
+
+### Décor
+
+Les boutons `<` et `>` parcourent toutes les instances destructibles du niveau. Chaque instance peut être réglée séparément :
+
+| Propriété | Effet |
+|---|---|
+| Vie actuelle | Change immédiatement l'état intact, endommagé, critique ou détruit |
+| Vie maximale | Redéfinit la réserve de dégâts de l'instance |
+| Seuil d'impact | Impulsion minimale en N·s avant application des dégâts |
+| Facteur de progression | Paramètre de calcul des seuils entre étapes ; les dégâts runtime soustraient actuellement l'intensité qualifiante à la vie |
+| Valeur de score | Base de score distribuée entre les étapes de dégâts |
+| Masse dynamique | Masse Havok une fois l'objet dynamique |
+| Impulsion de dispersion | Projection appliquée à la destruction |
+
+**Appliquer** modifie l'instance sans attribuer de score. **Détruire** force sa vie à zéro. **Restaurer** remet sa transformation, sa physique, sa vie et toutes ses propriétés aux valeurs du catalogue. Ces réglages ne sont pas sauvegardés.
+
+Le panneau est l'outil recommandé pour les réglages visuels et l'équilibrage courant. L'API console ci-dessous reste utile pour préparer rapidement une sauvegarde, débloquer du contenu ou automatiser un scénario.
+
+## API console : conditions
 
 L'API est installée uniquement avec Vite en mode développement.
 
@@ -50,6 +91,22 @@ Afficher le build actuellement selectionne et les statistiques effectivement uti
 
 ```js
 window.chaosDebug.build()
+```
+
+Afficher l'ambiance réellement active et le nombre de particules météo :
+
+```js
+window.chaosDebug.ambience()
+```
+
+Exemple :
+
+```js
+{
+  weather: "snow",
+  timeOfDay: "night",
+  activeParticleCount: 250
+}
 ```
 
 Le resultat contient notamment :
