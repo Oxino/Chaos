@@ -310,10 +310,15 @@ PNJ décoratifs uniquement au départ. Ils peuvent animer le décor de façon l�
 
 ## 7.6 Météo et heure [VALIDÉ, fréquence à confirmer]
 Météo et période de la journée aléatoires au début de chaque « manche » selon les échanges d'origine. Comme le terme n'est pas parfaitement aligné sur la structure en tirs, la fréquence doit rester configurable jusqu'à confirmation.
-- Météo possible : soleil, nuages, pluie, orage, brouillard ; tempête de sable sur Mars.
+- Météo possible : soleil, nuages, pluie, neige, orage, brouillard ; tempête de sable sur Mars.
 - Heure : aube, jour, crépuscule, nuit.
 - Pour la première version, effets surtout visuels.
 - Modificateurs de gameplay comme vent ou glissance : **[PROPOSITION]**, non validés.
+
+**État actuel [VALIDÉ]** : aube, jour, crépuscule et nuit possèdent des profils distincts de
+ciel, d'exposition et d'éclairage. La pluie et la neige utilisent des particules animées centrées
+sur la caméra ; le brouillard emploie une densité exponentielle. Ces effets restent purement
+visuels et sont recréés proprement à chaque chargement de niveau.
 
 # 8. SCORE, COMBOS ET QUÊTES
 
@@ -799,7 +804,7 @@ Niveaux et thèmes supplémentaires, 3–4 secrets par niveau, météo/heure al�
 7D — Mode triche : option désactivée par défaut, bombe cartoon réutilisant le souffle existant.
 7E — Validation : tests unitaires, typecheck, build et smoke test navigateur.
 
-**État actuel :** 7A à 7D implémentées : quatre niveaux data-driven avec 3 à 4 secrets chacun, sélection aléatoire météo/heure avec variation visuelle, mode libre accessible depuis la carte sans récompense ni progression officielle, et mode triche désactivé par défaut avec bombe atomique cartoon. Les secrets sont maintenant des zones invisibles révélées uniquement au passage du personnage. La pluie et le brouillard disposent d’effets visuels dédiés ; les modificateurs météo de gameplay restent volontairement hors périmètre.
+**État actuel :** 7A à 7D implémentées : quatre niveaux data-driven avec 3 à 4 secrets chacun, sélection aléatoire météo/heure avec variation visuelle, mode libre accessible depuis la carte sans récompense ni progression officielle, et mode triche désactivé par défaut avec bombe atomique cartoon. Les secrets sont maintenant des zones invisibles révélées uniquement au passage du personnage. Aube, jour, crépuscule et nuit disposent d'éclairages dédiés ; la pluie et la neige sont animées, et le brouillard dispose d'un effet exponentiel. Les modificateurs météo de gameplay restent volontairement hors périmètre.
 
 ## Phase 8 — Polish
 Animations, VFX, audio, tutoriel, accessibilité, optimisation mobile, tests de régression et préparation de sortie.

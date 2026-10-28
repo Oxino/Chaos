@@ -17,7 +17,7 @@ export const ruralDistrict: LevelBlockout = {
   targetScore: 60000,
   groundSize: 240,
   groundColor: "#59634a",
-  weatherOptions: ["sunny", "cloudy", "rain"],
+  weatherOptions: ["sunny", "cloudy", "rain", "snow"],
   timeOfDayOptions: ["dawn", "day", "dusk"],
   launcher: {
     position: { x: 0, y: 4, z: -64 },

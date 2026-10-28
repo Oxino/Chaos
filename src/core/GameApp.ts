@@ -1,6 +1,5 @@
 import {
   type ArcRotateCamera,
-  Color3,
   Color4,
   DirectionalLight,
   Engine,
@@ -10,7 +9,6 @@ import {
   type PhysicsAggregate,
   Scene,
   Vector3,
-  MeshBuilder,
 } from "@babylonjs/core";
 import { engineConfig, physicsConfig } from "../data/config/engineConfig";
 import {
@@ -64,6 +62,7 @@ import { describeBonuses } from "../data/content/skills/skillTypes";
 import { ShotController, type ShotState } from "../game/shot/ShotController";
 import { TrajectoryPreview } from "../rendering/TrajectoryPreview";
 import { AbilityEffects } from "../rendering/effects/AbilityEffects";
+import { AmbienceEffects } from "../rendering/effects/AmbienceEffects";
 import { createAimCamera, resetAimCamera } from "../rendering/cameras/createAimCamera";
 import { PrototypeHud } from "../ui/PrototypeHud";
 import type { CollectionProfileView } from "../ui/CollectionPanel";
@@ -127,10 +126,8 @@ export class GameApp {
   private readonly skills = new SkillTreeService();
   private readonly abilityEffects: AbilityEffects;
   private loadingCamera: FreeCamera | undefined;
-  private ambientLight: HemisphericLight | undefined;
-  private sunLight: DirectionalLight | undefined;
   private ambience: AmbienceSelection | undefined;
-  private ambienceMeshes: Mesh[] = [];
+  private ambienceEffects: AmbienceEffects | undefined;
 
   private level: LevelSystems | undefined;
   private levelIndex = 0;
@@ -228,6 +225,7 @@ export class GameApp {
       removeChaosDebugApi();
     }
     this.hud.dispose();
+    this.ambienceEffects?.dispose();
     this.scene.dispose();
     this.engine.dispose();
   }
@@ -235,14 +233,10 @@ export class GameApp {
   private createLighting(): void {
     const ambient = new HemisphericLight("ambientLight", new Vector3(0.2, 1, -0.3), this.scene);
     ambient.intensity = 0.75;
-    ambient.diffuse = Color3.FromHexString("#d9edff");
-    ambient.groundColor = Color3.FromHexString("#4d6680");
-    this.ambientLight = ambient;
 
     const sun = new DirectionalLight("sunLight", new Vector3(-0.35, -1, 0.5), this.scene);
     sun.intensity = 1.1;
-    sun.diffuse = Color3.FromHexString("#fff0c7");
-    this.sunLight = sun;
+    this.ambienceEffects = new AmbienceEffects(this.scene, ambient, sun);
   }
 
   private loadLevel(index: number, mode: "campaign" | "free" = "campaign"): void {
@@ -257,7 +251,6 @@ export class GameApp {
     this.baseSessionMode = mode;
     this.cheatEnabled = false;
     this.ambience = selectAmbience(blockout.weatherOptions, blockout.timeOfDayOptions);
-    this.applyAmbience();
 
     const destruction = new DestructionService(new DebrisBudget(destructionConfig.maxActiveDebris));
     const built = buildLevelBlockout(this.scene, blockout, destruction);
@@ -284,6 +277,7 @@ export class GameApp {
       meshes: [...built.meshes, ...launcherMeshes],
       aggregates: built.aggregates,
     };
+    this.applyAmbience();
 
     destruction.onImpact((report) => this.hud.showImpact(report));
     destruction.onDestruction((result) => {
@@ -296,66 +290,10 @@ export class GameApp {
   }
 
   private applyAmbience(): void {
-    if (!this.ambience || !this.ambientLight || !this.sunLight) {
+    if (!this.ambience) {
       return;
     }
-    const night = this.ambience.timeOfDay === "night";
-    const dusk = this.ambience.timeOfDay === "dusk";
-    const fog = this.ambience.weather === "fog";
-    const rain = this.ambience.weather === "rain";
-    this.clearAmbienceMeshes();
-    this.scene.clearColor = Color4.FromHexString(night
-      ? "#142239ff"
-      : dusk
-        ? "#b36f72ff"
-        : fog
-          ? "#91a7adff"
-          : rain
-            ? "#55728fff"
-            : "#78b8e3ff");
-    this.scene.fogMode = fog ? Scene.FOGMODE_EXP2 : Scene.FOGMODE_NONE;
-    this.scene.fogColor = Color3.FromHexString(fog ? "#9baeb0" : "#78b8e3");
-    this.scene.fogDensity = fog ? 0.008 : 0;
-    this.ambientLight.intensity = night ? 0.42 : fog ? 0.62 : 0.75;
-    this.sunLight.intensity = night ? 0.25 : rain ? 0.7 : dusk ? 0.8 : 1.1;
-    this.ambientLight.diffuse = Color3.FromHexString(
-      night ? "#8ab2e2" : dusk ? "#ffc49a" : fog ? "#d8e6e5" : "#d9edff",
-    );
-    this.ambientLight.groundColor = Color3.FromHexString(
-      night ? "#253a58" : dusk ? "#70505e" : fog ? "#60777c" : "#4d6680",
-    );
-    this.sunLight.diffuse = Color3.FromHexString(
-      night ? "#9ec6ff" : dusk ? "#ffb169" : rain ? "#c2d4eb" : "#fff0c7",
-    );
-    this.scene.imageProcessingConfiguration.contrast = night ? 1.2 : fog ? 0.95 : 1.1;
-    this.scene.imageProcessingConfiguration.exposure = night ? 0.88 : dusk ? 1.04 : 1;
-    if (rain) {
-      this.createRainVisual();
-    }
-  }
-
-  private createRainVisual(): void {
-    for (let index = 0; index < 72; index += 1) {
-      const x = (Math.random() - 0.5) * 120;
-      const z = Math.random() * 150 - 45;
-      const y = 10 + Math.random() * 24;
-      const streak = MeshBuilder.CreateLines(
-        `rain_${index}`,
-        { points: [new Vector3(x, y, z), new Vector3(x - 0.3, y - 2.4, z + 0.15)] },
-        this.scene,
-      );
-      streak.color = Color3.FromHexString("#9dbbd0");
-      streak.alpha = 0.45;
-      streak.isPickable = false;
-      this.ambienceMeshes.push(streak);
-    }
-  }
-
-  private clearAmbienceMeshes(): void {
-    for (const mesh of this.ambienceMeshes) {
-      mesh.dispose();
-    }
-    this.ambienceMeshes = [];
+    this.ambienceEffects?.apply(this.ambience);
   }
 
   private unloadLevel(): void {
@@ -381,6 +319,7 @@ export class GameApp {
       return;
     }
     const deltaMs = this.engine.getDeltaTime();
+    this.ambienceEffects?.update(this.scene.activeCamera?.position ?? Vector3.Zero());
 
     level.shots.update(deltaMs);
     if (this.lastShotState !== level.shots.currentState) {
@@ -607,6 +546,12 @@ export class GameApp {
 
     installChaosDebugApi({
       save: () => this.save.snapshot,
+      ambience: () => this.ambience
+        ? {
+          ...this.ambience,
+          activeParticleCount: this.ambienceEffects?.activeParticleCount ?? 0,
+        }
+        : null,
       build: () => ({
         launcherId: this.build.launcher.id,
         characterId: this.build.character.id,
@@ -1040,6 +985,7 @@ function ambienceLabel(ambience: AmbienceSelection | undefined): string {
     sunny: "Soleil",
     cloudy: "Nuages",
     rain: "Pluie",
+    snow: "Neige",
     fog: "Brouillard",
   };
   const timeOfDay: Record<AmbienceSelection["timeOfDay"], string> = {

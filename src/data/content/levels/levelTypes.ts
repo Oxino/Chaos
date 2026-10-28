@@ -7,7 +7,7 @@ export interface Vector3Like {
   readonly z: number;
 }
 
-export type WeatherType = "sunny" | "cloudy" | "rain" | "fog";
+export type WeatherType = "sunny" | "cloudy" | "rain" | "snow" | "fog";
 export type TimeOfDay = "dawn" | "day" | "dusk" | "night";
 
 /** Position d'ancrage fixe du lanceur dans le niveau (spec 5.3, 10.2). */

@@ -1,6 +1,7 @@
 import type { CollectionCategory, SaveData } from "./saveSchema";
 import type { ActiveAbility } from "../../data/content/items/abilityTypes";
 import type { ResolvedBuild } from "../build/buildMath";
+import type { AmbienceSelection } from "../level/ambienceMath";
 
 export interface ActiveBuildDebugView {
   readonly launcherId: string;
@@ -17,6 +18,9 @@ export interface ActiveBuildDebugView {
 export interface ChaosDebugApi {
   save(): SaveData;
   build(): ActiveBuildDebugView;
+  ambience(): (AmbienceSelection & {
+    readonly activeParticleCount: number;
+  }) | null;
   setCurrency(amount: number): Promise<SaveData>;
   addCurrency(amount: number): Promise<SaveData>;
   setXp(totalXp: number): Promise<SaveData>;
